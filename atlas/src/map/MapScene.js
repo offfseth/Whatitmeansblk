@@ -1,0 +1,501 @@
+import * as THREE from "three";
+import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
+import { getMapState } from "../data/eras.js";
+
+const PROJ_W = 975,
+  PROJ_H = 610,
+  UNIT = 20; // projection units per world unit
+const SEA_SPAN = 2.4; // sea sheet covers this multiple of the projection box
+const LAND_TOP = 0.55, // height of the lit land surface
+  LAND_DEPTH = 0.52, // thickness of the raised plate beneath it
+  SEA_Y = -0.4; // water level, so the coast reads as a real edge
+
+/** Owns WebGL only. Data, dates and event content stay outside this class.
+ * The canvas is transparent: the memorial layer lives behind it in the DOM,
+ * and the sea sheet thins toward the frame so that imagery can come through. */
+export class MapScene {
+  constructor(container, data, locations, onSelect, onError) {
+    this.container = container;
+    this.data = data;
+    this.locations = locations;
+    this.onSelect = onSelect;
+    this.frame = 0;
+    this.framesRendered = 0;
+    this.disposed = false;
+    this.markers = [];
+    this.cleanups = [];
+    this.textures = [];
+    this.scene = new THREE.Scene();
+    this.camera = new THREE.PerspectiveCamera(38, 1, 0.1, 260);
+    this.renderer = new THREE.WebGLRenderer({
+      antialias: true,
+      alpha: true,
+      powerPreference: "low-power",
+    });
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+    this.renderer.outputColorSpace = THREE.SRGBColorSpace;
+    this.renderer.setClearColor(0x000000, 0);
+    this.renderer.domElement.setAttribute(
+      "aria-label",
+      "Interactive United States map. Drag to orbit, right-drag to pan, scroll to zoom. Location buttons are available beside the map.",
+    );
+    this.renderer.domElement.setAttribute("role", "img");
+    container.prepend(this.renderer.domElement);
+    this.controls = new OrbitControls(this.camera, this.renderer.domElement);
+    // No damping, auto-rotation or continuous animation loop: idle means zero renders.
+    this.controls.enableDamping = false;
+    this.controls.minPolarAngle = 0.12;
+    this.controls.maxPolarAngle = 1.05;
+    this.controls.minAzimuthAngle = -0.8;
+    this.controls.maxAzimuthAngle = 0.8;
+    this.controls.minDistance = 20;
+    this.controls.maxDistance = 180;
+    this.controls.maxTargetRadius = 12;
+    this.controls.screenSpacePanning = false;
+    this.controls.zoomSpeed = 0.8;
+    this.controls.rotateSpeed = 0.55;
+    this.controls.addEventListener("change", () => this.invalidate("controls"));
+
+    // Warm key light from the north-west, matching the direction baked into the
+    // relief, with a cool fill opposite it so far slopes keep their shape.
+    this.scene.add(new THREE.HemisphereLight("#cfe1e8", "#4a3a2b", 1.5));
+    const sun = new THREE.DirectionalLight("#ffe7c0", 2.15);
+    sun.position.set(-25, 40, -20);
+    this.scene.add(sun);
+    const fill = new THREE.DirectionalLight("#6d8e99", 0.5);
+    fill.position.set(30, 14, 28);
+    this.scene.add(fill);
+
+    this.buildSea();
+    this.buildLand();
+    this.buildMarkers();
+    this.addMapLabels();
+    this.resizeObserver = new ResizeObserver(() => this.resize());
+    this.resizeObserver.observe(container);
+    const listen = (target, type, fn, options) => {
+      target.addEventListener(type, fn, options);
+      this.cleanups.push(() => target.removeEventListener(type, fn, options));
+    };
+    let down = null;
+    listen(this.renderer.domElement, "pointerdown", (e) => {
+      down = { x: e.clientX, y: e.clientY, time: performance.now() };
+    });
+    listen(this.renderer.domElement, "pointerup", (e) => {
+      if (
+        !down ||
+        Math.hypot(e.clientX - down.x, e.clientY - down.y) > 6 ||
+        performance.now() - down.time > 600
+      )
+        return;
+      down = null;
+      const rect = this.renderer.domElement.getBoundingClientRect();
+      const cursor = new THREE.Vector2(
+        ((e.clientX - rect.left) / rect.width) * 2 - 1,
+        (-(e.clientY - rect.top) / rect.height) * 2 + 1,
+      );
+      const ray = new THREE.Raycaster();
+      ray.setFromCamera(cursor, this.camera);
+      const hit = ray.intersectObjects(
+        this.markers.filter((m) => m.mesh.visible).map((m) => m.mesh),
+        false,
+      )[0];
+      if (hit) onSelect(hit.object.userData.id);
+    });
+    listen(this.renderer.domElement, "pointercancel", () => {
+      down = null;
+    });
+    listen(this.renderer.domElement, "webglcontextlost", (e) => {
+      e.preventDefault();
+      onError(
+        "The graphics connection was interrupted. Reload to restore the map.",
+      );
+    });
+    listen(document, "visibilitychange", () => {
+      if (document.hidden && this.frame) {
+        cancelAnimationFrame(this.frame);
+        this.frame = 0;
+      } else if (!document.hidden) this.invalidate();
+    });
+    this.resize();
+    this.reset();
+  }
+  load(file, options = {}) {
+    const texture = new THREE.TextureLoader().load(
+      file,
+      () => this.invalidate(),
+      undefined,
+      () => this.container.dispatchEvent(new CustomEvent("asseterror")),
+    );
+    // Colour maps are sRGB; normals and the roughness pack are plain data.
+    if (options.srgb) texture.colorSpace = THREE.SRGBColorSpace;
+    texture.anisotropy = Math.min(
+      4,
+      this.renderer.capabilities.getMaxAnisotropy(),
+    );
+    this.textures.push(texture);
+    return texture;
+  }
+  buildSea() {
+    const water = this.load("/data/sea.webp", { srgb: true });
+    const sea = new THREE.Mesh(
+      new THREE.PlaneGeometry(
+        (PROJ_W / UNIT) * SEA_SPAN,
+        (PROJ_H / UNIT) * SEA_SPAN,
+      ),
+      // Same lighting model as the land, so the two surfaces stay in the same
+      // exposure. Low roughness is what makes the water read as water: it keeps
+      // a soft sheen where the land goes matte.
+      new THREE.MeshStandardMaterial({
+        map: water,
+        transparent: true,
+        roughness: 0.34,
+        metalness: 0,
+      }),
+    );
+    sea.rotation.x = -Math.PI / 2;
+    sea.position.y = SEA_Y;
+    this.scene.add(sea);
+  }
+  buildLand() {
+    const topParts = [],
+      shapes = [],
+      ranges = [];
+    let offset = 0;
+    for (const state of this.data.states.features) {
+      const polygons =
+        state.geometry.type === "MultiPolygon"
+          ? state.geometry.coordinates
+          : [state.geometry.coordinates];
+      for (const polygon of polygons) {
+        const toPoints = (ring) =>
+          ring.map(
+            ([x, y]) =>
+              new THREE.Vector2((x - PROJ_W / 2 - 0) / UNIT, (305 - y) / UNIT),
+          );
+        const shape = new THREE.Shape(toPoints(polygon[0]));
+        for (const hole of polygon.slice(1))
+          shape.holes.push(new THREE.Path(toPoints(hole)));
+        shapes.push(shape);
+        const source = new THREE.ShapeGeometry(shape);
+        const geom = source.toNonIndexed();
+        source.dispose();
+        const pos = geom.getAttribute("position"),
+          uv = geom.getAttribute("uv");
+        for (let i = 0; i < pos.count; i++)
+          uv.setXY(
+            i,
+            (pos.getX(i) * UNIT + PROJ_W / 2) / PROJ_W,
+            (pos.getY(i) * UNIT + 305) / PROJ_H,
+          );
+        geom.rotateX(-Math.PI / 2);
+        geom.translate(0, LAND_TOP, 0);
+        ranges.push({ id: state.id, start: offset, count: pos.count });
+        offset += pos.count;
+        topParts.push(geom);
+      }
+    }
+    this.ranges = ranges;
+    const top = mergeGeometries(topParts);
+    topParts.forEach((g) => g.dispose());
+    const colors = new Float32Array(
+      top.getAttribute("position").count * 3,
+    ).fill(1);
+    top.setAttribute(
+      "color",
+      new THREE.BufferAttribute(colors, 3).setUsage(THREE.DynamicDrawUsage),
+    );
+    top.setAttribute(
+      "emphasis",
+      new THREE.BufferAttribute(
+        new Float32Array(colors.length / 3),
+        1,
+      ).setUsage(THREE.DynamicDrawUsage),
+    );
+    this.terrain = this.load("/data/terrain.webp", { srgb: true });
+    this.normals = this.load("/data/normals.webp");
+    this.surface = this.load("/data/surface.webp");
+    this.topMaterial = new THREE.MeshStandardMaterial({
+      map: this.terrain,
+      normalMap: this.normals,
+      normalScale: new THREE.Vector2(1.15, 1.15),
+      // Green channel drives roughness and blue drives metalness, so rivers and
+      // lakes painted into the surface map catch the sun the way water does.
+      roughnessMap: this.surface,
+      metalnessMap: this.surface,
+      roughness: 1,
+      metalness: 1,
+      vertexColors: true,
+    });
+    // Tint the illustrative layer by the land's own brightness so the era
+    // highlight colours the terrain instead of painting over it.
+    this.topMaterial.onBeforeCompile = (shader) => {
+      shader.vertexShader =
+        "attribute float emphasis; varying float vEmphasis;\n" +
+        shader.vertexShader;
+      shader.vertexShader = shader.vertexShader.replace(
+        "#include <begin_vertex>",
+        "#include <begin_vertex>\n vEmphasis = emphasis;",
+      );
+      shader.fragmentShader =
+        "varying float vEmphasis;\n" + shader.fragmentShader;
+      shader.fragmentShader = shader.fragmentShader.replace(
+        "#include <color_fragment>",
+        "float eLum = dot(diffuseColor.rgb, vec3(0.299, 0.587, 0.114));\n" +
+          " diffuseColor.rgb = mix(diffuseColor.rgb, vColor * (0.42 + eLum * 1.3), vEmphasis);",
+      );
+    };
+    this.land = new THREE.Mesh(top, this.topMaterial);
+    this.scene.add(this.land);
+    const base = new THREE.ExtrudeGeometry(shapes, {
+      depth: LAND_DEPTH,
+      bevelEnabled: false,
+      steps: 1,
+      curveSegments: 1,
+    });
+    base.rotateX(-Math.PI / 2);
+    this.scene.add(
+      new THREE.Mesh(
+        base,
+        new THREE.MeshLambertMaterial({ color: "#4a3425" }),
+      ),
+    );
+    const lines = [];
+    for (const ring of this.data.borders.coordinates)
+      for (let i = 1; i < ring.length; i++)
+        for (const p of [ring[i - 1], ring[i]])
+          lines.push(
+            (p[0] - PROJ_W / 2) / UNIT,
+            LAND_TOP + 0.03,
+            (p[1] - 305) / UNIT,
+          );
+    this.border = new THREE.LineSegments(
+      new THREE.BufferGeometry().setAttribute(
+        "position",
+        new THREE.Float32BufferAttribute(lines, 3),
+      ),
+      new THREE.LineBasicMaterial({
+        color: "#f6e6c8",
+        transparent: true,
+        opacity: 0.3,
+      }),
+    );
+    this.scene.add(this.border);
+  }
+  buildMarkers() {
+    const geometry = new THREE.SphereGeometry(0.22, 12, 8),
+      haloGeometry = new THREE.RingGeometry(0.32, 0.4, 24);
+    for (const location of this.locations) {
+      const point = this.data.locations.find(
+        (l) => l.id === location.id,
+      )?.point;
+      if (!point) continue;
+      const group = new THREE.Group();
+      group.position.set(
+        (point[0] - PROJ_W / 2) / UNIT,
+        LAND_TOP + 0.33,
+        (point[1] - 305) / UNIT,
+      );
+      const material = new THREE.MeshBasicMaterial({ color: "#e2642a" }),
+        mesh = new THREE.Mesh(geometry, material);
+      mesh.userData.id = location.id;
+      const halo = new THREE.Mesh(
+        haloGeometry,
+        new THREE.MeshBasicMaterial({
+          color: "#e8a24f",
+          side: THREE.DoubleSide,
+        }),
+      );
+      halo.rotation.x = -Math.PI / 2;
+      halo.position.y = -0.32;
+      group.add(mesh, halo);
+      this.scene.add(group);
+      const button = document.createElement("button");
+      button.className = "map-label";
+      button.textContent = location.name;
+      button.setAttribute("aria-label", "Select " + location.name);
+      button.onclick = () => this.onSelect(location.id);
+      this.container.append(button);
+      this.markers.push({ id: location.id, group, mesh, halo, button });
+    }
+  }
+  addMapLabels() {
+    this.mapLabels = [
+      ["PACIFIC OCEAN", -24, 4],
+      ["ATLANTIC OCEAN", 23, 4],
+      ["GULF OF MEXICO", 7, 14.5],
+      ["ALASKA · INSET", -18, 15],
+      ["HAWAIʻI · INSET", -8, 15],
+    ].map(([name, x, z]) => {
+      const el = document.createElement("span");
+      el.className = "ocean-label";
+      el.textContent = name;
+      this.container.append(el);
+      return { el, position: new THREE.Vector3(x, SEA_Y, z) };
+    });
+  }
+  update(year, visibleIds, selectedId) {
+    const state = getMapState(
+      year,
+      this.data.states.features.map((s) => s.id),
+    );
+    const color = new THREE.Color(),
+      neutral = new THREE.Color("#ffffff"),
+      accent = new THREE.Color(state.era.color);
+    const attr = this.land.geometry.getAttribute("color"),
+      emphasis = this.land.geometry.getAttribute("emphasis");
+    if (this.lastYear !== year) {
+      for (const range of this.ranges) {
+        const active = state.active.has(range.id);
+        color.copy(active ? accent : neutral);
+        for (let i = range.start; i < range.start + range.count; i++) {
+          attr.setXYZ(i, color.r, color.g, color.b);
+          emphasis.setX(i, active ? 0.26 + state.emphasis * 0.38 : 0);
+        }
+      }
+      attr.needsUpdate = true;
+      emphasis.needsUpdate = true;
+      this.lastYear = year;
+    }
+    for (const m of this.markers) {
+      const visible = visibleIds.has(m.id);
+      m.group.visible = visible;
+      m.mesh.visible = visible;
+      m.button.hidden = !visible;
+      m.button.classList.toggle("selected", m.id === selectedId);
+      m.button.setAttribute("aria-pressed", String(m.id === selectedId));
+      m.mesh.material.color.set(m.id === selectedId ? "#fbead0" : "#e2642a");
+      m.halo.scale.setScalar(m.id === selectedId ? 1.4 : 1);
+    }
+    this.invalidate();
+  }
+  setRelief(show) {
+    this.topMaterial.normalScale.setScalar(show ? 1.15 : 0);
+    this.invalidate();
+  }
+  setBorders(show) {
+    this.border.visible = show;
+    this.invalidate();
+  }
+  reset() {
+    const distance = Math.max(
+      51,
+      29 / (Math.tan((19 * Math.PI) / 180) * this.camera.aspect),
+    );
+    this.controls.target.set(0, 0, 0);
+    this.camera.position.set(0, distance * 0.83, distance * 0.56);
+    this.controls.update();
+    this.invalidate();
+  }
+  zoom(factor) {
+    const offset = this.camera.position.clone().sub(this.controls.target);
+    offset.setLength(
+      THREE.MathUtils.clamp(
+        offset.length() * factor,
+        this.controls.minDistance,
+        this.controls.maxDistance,
+      ),
+    );
+    this.camera.position.copy(this.controls.target).add(offset);
+    this.controls.update();
+    this.invalidate();
+  }
+  topView() {
+    this.camera.position
+      .copy(this.controls.target)
+      .add(new THREE.Vector3(0, 58, 0.01));
+    this.controls.update();
+    this.invalidate();
+  }
+  resize() {
+    const w = this.container.clientWidth,
+      h = this.container.clientHeight;
+    if (!w || !h) return;
+    const crossed = this.camera.aspect < 1 !== w / h < 1;
+    this.camera.aspect = w / h;
+    this.camera.updateProjectionMatrix();
+    this.renderer.setSize(w, h, false);
+    if (crossed) this.reset();
+    this.invalidate("resize");
+  }
+  invalidate(reason = "other") {
+    if (import.meta.env.DEV) {
+      this.reasons ??= {};
+      this.reasons[reason] = (this.reasons[reason] ?? 0) + 1;
+      this.renderer.domElement.dataset.requests = JSON.stringify(this.reasons);
+    }
+    if (!this.frame && !this.disposed && !document.hidden)
+      this.frame = requestAnimationFrame(() => {
+        this.frame = 0;
+        this.render();
+      });
+  }
+  render() {
+    this.renderer.render(this.scene, this.camera);
+    this.framesRendered++;
+    if (import.meta.env.DEV) {
+      const d = this.renderer.domElement.dataset;
+      d.frames = String(this.framesRendered);
+      d.drawCalls = String(this.renderer.info.render.calls);
+      d.triangles = String(this.renderer.info.render.triangles);
+      d.pixelRatio = String(this.renderer.getPixelRatio());
+    }
+    const width = this.container.clientWidth,
+      height = this.container.clientHeight,
+      point = new THREE.Vector3();
+    const place = (el, position) => {
+      point.copy(position).project(this.camera);
+      const x = (point.x * 0.5 + 0.5) * width,
+        y = (-point.y * 0.5 + 0.5) * height;
+      el.style.transform =
+        "translate(-50%, -50%) translate(" + x + "px," + y + "px)";
+      el.style.visibility =
+        point.z > 1 || x < 0 || x > width || y < 0 || y > height
+          ? "hidden"
+          : "visible";
+      return { x, y };
+    };
+    const occupied = [];
+    for (const m of this.markers) {
+      if (!m.group.visible) continue;
+      const p = place(m.button, m.group.position);
+      const collides = occupied.some(
+        (q) => Math.abs(q.x - p.x) < 115 && Math.abs(q.y - p.y) < 30,
+      );
+      m.button.classList.toggle("compact", collides);
+      if (!collides) occupied.push(p);
+    }
+    this.mapLabels.forEach((l) => place(l.el, l.position));
+  }
+  stats() {
+    return {
+      frames: this.framesRendered,
+      drawCalls: this.renderer.info.render.calls,
+      triangles: this.renderer.info.render.triangles,
+      pixelRatio: this.renderer.getPixelRatio(),
+    };
+  }
+  dispose() {
+    this.disposed = true;
+    cancelAnimationFrame(this.frame);
+    this.resizeObserver.disconnect();
+    this.controls.dispose();
+    this.cleanups.forEach((fn) => fn());
+    const geometries = new Set(),
+      materials = new Set();
+    this.scene.traverse((obj) => {
+      if (obj.geometry) geometries.add(obj.geometry);
+      if (obj.material)
+        (Array.isArray(obj.material) ? obj.material : [obj.material]).forEach(
+          (m) => materials.add(m),
+        );
+    });
+    geometries.forEach((g) => g.dispose());
+    materials.forEach((m) => m.dispose());
+    this.textures.forEach((t) => t.dispose());
+    this.renderer.dispose();
+    this.renderer.domElement.remove();
+    this.markers.forEach((m) => m.button.remove());
+    this.mapLabels.forEach((l) => l.el.remove());
+  }
+}

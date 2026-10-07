@@ -1,0 +1,243 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#120d0a" />
+    <meta
+      name="description"
+      content="Explore an interactive 3D map and timeline for a future atlas of African American history."
+    />
+    <title>Black Atlas — A history in place</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="preload" as="font" type="font/woff2" href="/fonts/bodoni-moda.woff2" crossorigin />
+    <link rel="preload" as="font" type="font/woff2" href="/fonts/archivo.woff2" crossorigin />
+    <link rel="stylesheet" href="/fonts/fonts.css" />
+  </head>
+  <body>
+    <div id="app">
+      <header class="masthead">
+        <a class="brand" href="./" aria-label="Black Atlas home"
+          ><span class="brand-mark" data-icon="compass"></span
+          ><span>BLACK<span class="brand-light">ATLAS</span></span></a
+        ><span class="masthead-caption">AFRICAN AMERICAN HISTORY, IN PLACE</span
+        ><span class="edition">EXPLORER <span>01</span></span>
+      </header>
+      <main>
+        <section class="map-section" aria-label="Map explorer">
+          <div class="memorial" aria-hidden="true">
+            <div class="memorial-track" id="memorial-track"></div>
+            <div class="memorial-veil"></div>
+          </div>
+          <div id="map" class="map">
+            <div class="map-status" id="map-status" role="status">
+              <span class="loading-dot"></span>Preparing the atlas…
+            </div>
+          </div>
+          <div class="intro">
+            <div class="eyebrow">
+              <span class="gold-line"></span> A HISTORY IN PLACE
+            </div>
+            <h1>A nation. Countless stories.</h1>
+            <p>
+              Move through time.<br />Discover the places that hold our history.
+            </p>
+          </div>
+          <div class="map-tools" aria-label="Map controls">
+            <button
+              id="zoom-in"
+              title="Zoom in"
+              aria-label="Zoom in"
+              data-icon="plus"
+            ></button
+            ><button
+              id="zoom-out"
+              title="Zoom out"
+              aria-label="Zoom out"
+              data-icon="minus"
+            ></button
+            ><span class="tool-divider"></span
+            ><button
+              id="top-view"
+              title="View from above"
+              aria-label="View from above"
+              data-icon="layers"
+            ></button
+            ><button
+              id="reset-view"
+              title="Reset view"
+              aria-label="Reset view"
+              data-icon="reset"
+            ></button>
+          </div>
+          <div class="orientation" aria-hidden="true">
+            <span>N</span><span data-icon="compass"></span>
+          </div>
+          <div class="map-bottom">
+            <div class="legend">
+              <div class="legend-title">ILLUSTRATIVE LAYER</div>
+              <div>
+                <i class="legend-swatch"></i
+                ><span id="layer-name">Coastal focus</span
+                ><i class="legend-pin"></i><span>Location</span>
+              </div>
+              <p>Modern borders · demo highlights</p>
+            </div>
+            <div class="layer-toggles">
+              <label><input id="relief" type="checkbox" checked /> Relief</label
+              ><label
+                ><input id="borders" type="checkbox" checked /> Borders</label
+              >
+            </div>
+          </div>
+          <aside
+            class="selection"
+            id="selection"
+            hidden
+            aria-labelledby="selection-name"
+            aria-live="polite"
+          >
+            <button
+              id="close-selection"
+              class="close"
+              aria-label="Close location details"
+              data-icon="close"
+            ></button>
+            <div class="eyebrow">SELECTED LOCATION</div>
+            <h2 id="selection-name"></h2>
+            <p id="selection-region"></p>
+            <div class="selection-year">
+              <span id="selection-date"></span> <span>LOCATION PREVIEW</span>
+            </div>
+            <p>Stories, photographs, and historical context will live here.</p>
+            <p class="stub-note">
+              This is a placeholder. No event records have been added.
+            </p>
+          </aside>
+        </section>
+        <section class="timeline" aria-label="History timeline">
+          <div class="timeline-top">
+            <div class="current-date">
+              <span class="eyebrow">EXPLORE THE YEAR</span
+              ><output id="year-output">1619</output>
+            </div>
+            <div class="era-caption">
+              <span class="eyebrow">TIME & PLACE</span>
+              <h2 id="era-title"></h2>
+              <span class="demo-note" id="timeline-note"
+                >Demonstration timeline · historical layers coming later</span
+              >
+            </div>
+            <form id="year-form">
+              <label for="year-input">Jump to year</label>
+              <div>
+                <input
+                  id="year-input"
+                  type="number"
+                  min="1619"
+                  value="1619"
+                  required
+                  inputmode="numeric"
+                  aria-label="Jump to year"
+                /><button type="submit">Go</button>
+              </div>
+            </form>
+          </div>
+          <div class="scrubber-row">
+            <button
+              class="play"
+              id="play"
+              aria-label="Play timeline"
+              title="Play timeline"
+              data-icon="play"
+            ></button>
+            <div class="track-wrap">
+              <input
+                id="year-slider"
+                type="range"
+                min="1619"
+                step="1"
+                value="1619"
+                aria-label="Year"
+                aria-describedby="timeline-note"
+              />
+              <div class="ticks" id="ticks"></div>
+            </div>
+          </div>
+          <div class="timeline-bottom">
+            <div
+              class="era-buttons"
+              id="era-buttons"
+              aria-label="Jump to demonstration snapshot"
+            ></div>
+            <span class="interaction-hint"
+              >Drag to orbit · Scroll to zoom · Right-drag to pan</span
+            >
+          </div>
+        </section>
+      </main>
+      <footer>
+        <span
+          >PROTOTYPE ATLAS <span class="footer-divider">/</span>
+          <span id="date-range"></span
+        ></span>
+        <details class="credits">
+          <summary>Map notes & credits</summary>
+          <div>
+            <h2>About this prototype</h2>
+            <p>
+              These are modern boundaries, including Alaska and Hawaiʻi insets.
+              Colored regions and marker dates are synthetic demonstrations, not
+              historical claims or a map of slavery. The timeline begins in
+              1619; this is not the beginning of African presence throughout the
+              Americas.
+            </p>
+            <p>
+              Boundaries:
+              <a
+                href="https://github.com/topojson/us-atlas"
+                target="_blank"
+                rel="noreferrer"
+                >U.S. Atlas / U.S. Census Bureau</a
+              >
+              (ISC). Elevation:
+              <a
+                href="https://github.com/tilezen/joerd"
+                target="_blank"
+                rel="noreferrer"
+                >Mapzen terrain tiles</a
+              >, USGS 3DEP / GMTED2010 / SRTM and NOAA ETOPO1. Rivers, lakes and
+              neighbouring coastlines:
+              <a
+                href="https://www.naturalearthdata.com/"
+                target="_blank"
+                rel="noreferrer"
+                >Natural Earth</a
+              >
+              (public domain). Relief has been downsampled and visually
+              exaggerated, and the land colouring is an illustrative palette
+              drawn from elevation, slope and position — not a land-cover survey.
+            </p>
+            <p id="memorial-credit"></p>
+            <p>
+              <a href="/data/us-atlas-LICENSE.txt" target="_blank"
+                >Boundary license</a
+              >
+              ·
+              <a href="/data/terrain-attribution.md" target="_blank"
+                >Full terrain attribution</a
+              >
+            </p>
+          </div>
+        </details>
+        <label class="location-picker-label"
+          >Locations
+          <select id="location-picker" aria-label="Select a visible location">
+            <option value="">Select a place</option>
+          </select></label
+        >
+      </footer>
+    </div>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

@@ -1,0 +1,68 @@
+/** Stable IDs and date intervals are the future event-layer join keys.
+ * Dates here control illustrative visibility, not verified event records. */
+export const locations = [
+  {
+    id: "point-comfort",
+    name: "Point Comfort",
+    region: "Virginia",
+    coordinates: [-76.308, 37.003],
+    from: 1619,
+    to: 9999,
+  },
+  {
+    id: "charleston",
+    name: "Charleston",
+    region: "South Carolina",
+    coordinates: [-79.931, 32.777],
+    from: 1700,
+    to: 9999,
+  },
+  {
+    id: "philadelphia",
+    name: "Philadelphia",
+    region: "Pennsylvania",
+    coordinates: [-75.165, 39.953],
+    from: 1776,
+    to: 9999,
+  },
+  {
+    id: "new-orleans",
+    name: "New Orleans",
+    region: "Louisiana",
+    coordinates: [-90.072, 29.951],
+    from: 1800,
+    to: 9999,
+  },
+  {
+    id: "washington",
+    name: "Washington, D.C.",
+    region: "District of Columbia",
+    coordinates: [-77.037, 38.907],
+    from: 1865,
+    to: 9999,
+  },
+  {
+    id: "chicago",
+    name: "Chicago",
+    region: "Illinois",
+    coordinates: [-87.63, 41.878],
+    from: 1916,
+    to: 9999,
+  },
+  {
+    id: "montgomery",
+    name: "Montgomery",
+    region: "Alabama",
+    coordinates: [-86.3, 32.367],
+    from: 1955,
+    to: 9999,
+  },
+  {
+    id: "los-angeles",
+    name: "Los Angeles",
+    region: "California",
+    coordinates: [-118.244, 34.052],
+    from: 1965,
+    to: 9999,
+  },
+];
