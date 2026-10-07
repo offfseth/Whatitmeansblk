@@ -12,6 +12,7 @@ const icons = {
   reset: '<path d="M4 10a8 8 0 1 1 1 8M4 4v6h6"/>',
   layers: '<path d="m3 8 9-5 9 5-9 5zM3 12l9 5 9-5M3 16l9 5 9-5"/>',
   close: '<path d="m6 6 12 12M18 6 6 18"/>',
+  menu: '<path d="M4 7h16M4 12h16M4 17h16"/>',
   play: '<path d="m8 5 11 7-11 7z"/>',
   pause: '<path d="M9 5v14M15 5v14"/>',
 };
@@ -147,6 +148,12 @@ $("play").onclick = () => {
     if (y >= MAX_YEAR) stopPlayback();
   }, 100);
 };
+// The drawer opens on hover through CSS alone, so it still works before this
+// script runs. Clicking the handle pins it open for touch and keyboard.
+$("drawer-handle").onclick = () => {
+  const pinned = $("drawer").classList.toggle("pinned");
+  $("drawer-handle").setAttribute("aria-expanded", String(pinned));
+};
 $("close-selection").onclick = () => timeline.select(null);
 $("location-picker").onchange = (e) => timeline.select(e.target.value || null);
 $("zoom-in").onclick = () => scene?.zoom(0.8);
@@ -156,7 +163,14 @@ $("top-view").onclick = () => scene?.topView();
 $("relief").onchange = (e) => scene?.setRelief(e.target.checked);
 $("borders").onchange = (e) => scene?.setBorders(e.target.checked);
 document.addEventListener("keydown", (e) => {
-  if (e.key === "Escape") timeline.select(null);
+  if (e.key !== "Escape") return;
+  if ($("drawer").classList.contains("pinned")) {
+    $("drawer").classList.remove("pinned");
+    $("drawer-handle").setAttribute("aria-expanded", "false");
+    $("drawer-handle").focus();
+    return;
+  }
+  timeline.select(null);
 });
 document.addEventListener("visibilitychange", () => {
   if (document.hidden) stopPlayback();

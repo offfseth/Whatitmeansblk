@@ -33,9 +33,10 @@ No API keys, accounts, backend, or live map-tile service are needed. The map ass
 
 ## What is implemented
 
-- Orbit, tilt, pan, zoom, reset, and overhead view with limits on tilt, azimuth, zoom, and pan distance.
+- Orbit, tilt, pan, zoom, reset, and overhead view. Every limit is set so the sea sheet still fills the frame at the extremes, so there is no angle or zoom from which the empty space past it comes into view. The pull-back limit tracks the window's aspect ratio.
 - All 50 states and D.C.; Alaska and Hawaiʻi are explicitly labeled insets in the Albers USA composite projection.
-- Raised land geometry, blue ocean, modern state outlines, and color/normal textures baked from real elevation samples.
+- Land that descends into the water on a shelf rather than ending in a cut-out wall, modern state outlines, and colour/normal/surface textures baked from real elevation samples.
+- A drawer on the left edge that slides out on hover, pins open on click, and closes on Escape.
 - Native accessible year scrubber, validated year form, five demo snapshot jumps, and optional playback.
 - Eight data-driven locations. Visibility changes with the year; buttons and the footer location selector open a minimal stub panel. Changing to a year where the selected marker is absent clears selection.
 - Responsive desktop/phone layout, keyboard-accessible controls, loading/error states, WebGL failure messaging, and reduced idle GPU work.
@@ -51,6 +52,8 @@ No API keys, accounts, backend, or live map-tile service are needed. The map ass
 **Land colour** is hand-authored cartography, not a land-cover dataset. Elevation, slope, latitude and longitude drive a deliberately narrow warm range — sand, red rock, dry and wet grass, hardwood and conifer, tundra, marsh, exposed rock and snow — pulled 30% toward neutral and then warmed, so regional character is carried mostly by value and relief rather than by hue. Two scales of noise keep the continental moisture gradient from banding into a straight seam down the hundredth meridian.
 
 **Water** is treated as a real surface, not blank space. River valleys and lake beds are carved into the elevation grid *before* relief is derived, so the normal map shows genuine incision rather than painted-on lines; a roughness/metalness map makes water hold a sheen where the land stays matte. The sea sheet is coloured by distance from shore (deep basin, shelf, shallows), carries a faint graticule, and shows Canada, Mexico and the Caribbean as quiet dark silhouettes so the Gulf of Mexico, the Great Lakes and both coasts have their true shape. Its alpha is solid over the subject and over enclosed seas and thins across the open ocean, which is what lets the memorial layer through at the left and right of the frame.
+
+**The coast.** The land sits only just proud of the water, and the shoreline carries a shelf that steps outward and down from the coast, through a foreshore and the waterline, to a shelf break below the sea. The shelf samples the terrain texture at the shoreline itself, so every coast keeps its own colour as it goes under. A tall plate reads as a cut-out pasted onto a sea however its edge is shaded, so the height difference itself is kept small and relief carries the dimension instead. Islands and lakes narrower than a full shelf get a proportionally narrower one, because otherwise the slope folds back through itself. The shelf is built from the dissolved outline of the landmass (`outline` in `map.json`), so state borders inland are untouched.
 
 **Memorial layer.** `src/data/memorial.js` lists the plates; `public/memorial/` holds them. The strip is duplicated once and driven by a single CSS transform animation, so the blurred plates rasterise once and are then composited — no JavaScript runs per frame, and no WebGL frame is requested. It pauses when the tab is hidden and holds still under `prefers-reduced-motion`.
 
@@ -70,6 +73,7 @@ No API keys, accounts, backend, or live map-tile service are needed. The map ass
 | Select           | Click location or footer selector                 | Tap location or selector  |
 | Year             | Drag slider; focus and use arrow keys; enter year | Drag slider or enter year |
 | Reset / overhead | Map toolbar                                       | Map toolbar               |
+| Open the drawer  | Hover the left edge, or click the handle          | Tap the handle            |
 | Close selection  | Close button or Escape                            | Close button              |
 
 No animation starts automatically. Playback advances at 10 years per second, stops at the present year, pauses on manual scrubbing, and stops when the tab is hidden.
@@ -99,7 +103,7 @@ atlas/
   public/
     favicon.svg
     data/
-      map.json                  Prepared modern boundaries and projected locations
+      map.json                  Boundaries, dissolved outline, projected locations
       terrain.webp              Biome palette over shaded relief
       normals.webp               Multi-scale normals, river valleys incised
       surface.webp               Roughness and metalness: water reads as water

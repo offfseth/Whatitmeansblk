@@ -7,9 +7,22 @@ const PROJ_W = 975,
   PROJ_H = 610,
   UNIT = 20; // projection units per world unit
 const SEA_SPAN = 2.4; // sea sheet covers this multiple of the projection box
-const LAND_TOP = 0.55, // height of the lit land surface
-  LAND_DEPTH = 0.52, // thickness of the raised plate beneath it
-  SEA_Y = -0.4; // water level, so the coast reads as a real edge
+// The land sits only just proud of the water. A tall plate reads as a cut-out
+// pasted onto a sea however its edge is shaded, so the height difference itself
+// has to stay small; relief and shading carry the dimension instead.
+const LAND_TOP = 0.15,
+  SEA_Y = -0.05;
+/** The coast descends instead of being cut off: each step moves out from the
+ * shoreline, drops a little, and shifts colour from the land's own tone at the
+ * water's edge through wet shelf to the dark of the basin. `tint` multiplies
+ * the terrain texture, so every coast keeps its local colour at the top. */
+const COAST_PROFILE = [
+  { out: 0, y: LAND_TOP, tint: [1, 1, 1] },
+  { out: 0.06, y: 0.135, tint: [0.96, 0.94, 0.89] }, // near flat, meets the land
+  { out: 0.18, y: 0.04, tint: [0.72, 0.73, 0.67] }, // foreshore
+  { out: 0.3, y: -0.06, tint: [0.52, 0.6, 0.59] }, // the waterline
+  { out: 0.4, y: -0.26, tint: [0.3, 0.42, 0.45] }, // shelf break, under water
+];
 
 /** Owns WebGL only. Data, dates and event content stay outside this class.
  * The canvas is transparent: the memorial layer lives behind it in the DOM,
@@ -45,13 +58,17 @@ export class MapScene {
     this.controls = new OrbitControls(this.camera, this.renderer.domElement);
     // No damping, auto-rotation or continuous animation loop: idle means zero renders.
     this.controls.enableDamping = false;
+    // Limits are set so the sea sheet always fills the frame: tilting further
+    // over, turning further round or pulling further back would all bring its
+    // edge, or the empty space past it, into view. maxDistance is recomputed
+    // per aspect ratio in resize().
     this.controls.minPolarAngle = 0.12;
-    this.controls.maxPolarAngle = 1.05;
-    this.controls.minAzimuthAngle = -0.8;
-    this.controls.maxAzimuthAngle = 0.8;
-    this.controls.minDistance = 20;
-    this.controls.maxDistance = 180;
-    this.controls.maxTargetRadius = 12;
+    this.controls.maxPolarAngle = 0.82;
+    this.controls.minAzimuthAngle = -0.5;
+    this.controls.maxAzimuthAngle = 0.5;
+    this.controls.minDistance = 22;
+    this.controls.maxDistance = 90;
+    this.controls.maxTargetRadius = 6.5;
     this.controls.screenSpacePanning = false;
     this.controls.zoomSpeed = 0.8;
     this.controls.rotateSpeed = 0.55;
@@ -159,7 +176,6 @@ export class MapScene {
   }
   buildLand() {
     const topParts = [],
-      shapes = [],
       ranges = [];
     let offset = 0;
     for (const state of this.data.states.features) {
@@ -176,7 +192,6 @@ export class MapScene {
         const shape = new THREE.Shape(toPoints(polygon[0]));
         for (const hole of polygon.slice(1))
           shape.holes.push(new THREE.Path(toPoints(hole)));
-        shapes.push(shape);
         const source = new THREE.ShapeGeometry(shape);
         const geom = source.toNonIndexed();
         source.dispose();
@@ -247,19 +262,7 @@ export class MapScene {
     };
     this.land = new THREE.Mesh(top, this.topMaterial);
     this.scene.add(this.land);
-    const base = new THREE.ExtrudeGeometry(shapes, {
-      depth: LAND_DEPTH,
-      bevelEnabled: false,
-      steps: 1,
-      curveSegments: 1,
-    });
-    base.rotateX(-Math.PI / 2);
-    this.scene.add(
-      new THREE.Mesh(
-        base,
-        new THREE.MeshLambertMaterial({ color: "#4a3425" }),
-      ),
-    );
+    this.buildCoast();
     const lines = [];
     for (const ring of this.data.borders.coordinates)
       for (let i = 1; i < ring.length; i++)
@@ -281,6 +284,144 @@ export class MapScene {
       }),
     );
     this.scene.add(this.border);
+  }
+  /** A continental slope around every shoreline, lake shores included, so the
+   * land descends into the water instead of ending in a cut-out wall. */
+  buildCoast() {
+    const rows = COAST_PROFILE.length;
+    const positions = [],
+      normals = [],
+      uvs = [],
+      colors = [],
+      indices = [];
+    // Outward-and-upward facing normal of each profile segment, expressed as
+    // (horizontal, vertical) in the plane that contains the outward direction.
+    const slope = [];
+    for (let r = 0; r < rows - 1; r++) {
+      const dOut = COAST_PROFILE[r + 1].out - COAST_PROFILE[r].out,
+        dY = COAST_PROFILE[r + 1].y - COAST_PROFILE[r].y,
+        length = Math.hypot(dOut, dY) || 1;
+      slope.push([-dY / length, dOut / length]);
+    }
+    for (const polygon of this.data.outline.coordinates)
+      for (let ringIndex = 0; ringIndex < polygon.length; ringIndex++) {
+        // Rings arrive closed; the repeated last point would make a degenerate
+        // quad and a broken normal.
+        const points = polygon[ringIndex]
+          .slice(0, -1)
+          .map(([px, py]) => [(px - PROJ_W / 2) / UNIT, (py - 305) / UNIT]);
+        const n = points.length;
+        if (n < 3) continue;
+        let area = 0;
+        for (let i = 0; i < n; i++) {
+          const a = points[i],
+            b = points[(i + 1) % n];
+          area += a[0] * b[1] - b[0] * a[1];
+        }
+        // Ring zero is the shoreline and slopes away from the land; the rest
+        // are lakes and have to slope the other way, into the water.
+        const facing = (Math.sign(area) || 1) * (ringIndex === 0 ? 1 : -1);
+        const outward = points.map((_, i) => {
+          let x = 0,
+            z = 0;
+          for (const [a, b] of [
+            [points[(i - 1 + n) % n], points[i]],
+            [points[i], points[(i + 1) % n]],
+          ]) {
+            const dx = b[0] - a[0],
+              dz = b[1] - a[1],
+              length = Math.hypot(dx, dz);
+            if (!length) continue;
+            x += (dz / length) * facing;
+            z += (-dx / length) * facing;
+          }
+          const length = Math.hypot(x, z);
+          return length ? [x / length, z / length] : [0, 0];
+        });
+        // An island or lake narrower than the shelf cannot carry a full-width
+        // one: the slope would fold back through itself and read as a dark
+        // blob. Scale the shelf, and its drop, to the size of the ring.
+        let minX = Infinity,
+          maxX = -Infinity,
+          minZ = Infinity,
+          maxZ = -Infinity;
+        for (const [x, z] of points) {
+          minX = Math.min(minX, x);
+          maxX = Math.max(maxX, x);
+          minZ = Math.min(minZ, z);
+          maxZ = Math.max(maxZ, z);
+        }
+        const spread = THREE.MathUtils.clamp(
+          Math.max(maxX - minX, maxZ - minZ) / 2.6,
+          0.1,
+          1,
+        );
+        const sink = 0.4 + 0.6 * spread;
+        const base = positions.length / 3;
+        for (let r = 0; r < rows; r++) {
+          const step = COAST_PROFILE[r];
+          const before = slope[Math.max(0, r - 1)],
+            after = slope[Math.min(slope.length - 1, r)];
+          const nh = (before[0] + after[0]) / 2,
+            nv = (before[1] + after[1]) / 2,
+            nl = Math.hypot(nh, nv) || 1;
+          for (let i = 0; i < n; i++) {
+            positions.push(
+              points[i][0] + outward[i][0] * step.out * spread,
+              LAND_TOP + (step.y - LAND_TOP) * sink,
+              points[i][1] + outward[i][1] * step.out * spread,
+            );
+            normals.push(
+              (outward[i][0] * nh) / nl,
+              nv / nl,
+              (outward[i][1] * nh) / nl,
+            );
+            // Sample the terrain at the shoreline itself, so each coast keeps
+            // its own colour as it goes under.
+            uvs.push(
+              (points[i][0] * UNIT + PROJ_W / 2) / PROJ_W,
+              (305 - points[i][1] * UNIT) / PROJ_H,
+            );
+            colors.push(step.tint[0], step.tint[1], step.tint[2]);
+          }
+        }
+        // Which way round the quads wind depends on `facing`; getting it wrong
+        // makes the renderer treat the outer face as a back face and flip its
+        // normal, which lights the whole slope from inside and turns it black.
+        for (let r = 0; r < rows - 1; r++)
+          for (let i = 0; i < n; i++) {
+            const j = (i + 1) % n,
+              a = base + r * n + i,
+              b = base + r * n + j,
+              c = base + (r + 1) * n + i,
+              d = base + (r + 1) * n + j;
+            if (facing > 0) indices.push(a, b, c, b, d, c);
+            else indices.push(a, c, b, b, c, d);
+          }
+      }
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute(
+      "position",
+      new THREE.Float32BufferAttribute(positions, 3),
+    );
+    geometry.setAttribute(
+      "normal",
+      new THREE.Float32BufferAttribute(normals, 3),
+    );
+    geometry.setAttribute("uv", new THREE.Float32BufferAttribute(uvs, 2));
+    geometry.setAttribute("color", new THREE.Float32BufferAttribute(colors, 3));
+    geometry.setIndex(indices);
+    this.scene.add(
+      new THREE.Mesh(
+        geometry,
+        new THREE.MeshStandardMaterial({
+          map: this.terrain,
+          vertexColors: true,
+          roughness: 0.92,
+          metalness: 0,
+        }),
+      ),
+    );
   }
   buildMarkers() {
     const geometry = new THREE.SphereGeometry(0.22, 12, 8),
@@ -377,11 +518,15 @@ export class MapScene {
     this.border.visible = show;
     this.invalidate();
   }
-  reset() {
-    const distance = Math.max(
+  /** Distance at which the whole map is framed, for the current aspect. */
+  framingDistance() {
+    return Math.max(
       51,
       29 / (Math.tan((19 * Math.PI) / 180) * this.camera.aspect),
     );
+  }
+  reset() {
+    const distance = this.framingDistance();
     this.controls.target.set(0, 0, 0);
     this.camera.position.set(0, distance * 0.83, distance * 0.56);
     this.controls.update();
@@ -415,6 +560,9 @@ export class MapScene {
     this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(w, h, false);
+    // Allow a little pull-back past the framing distance, never enough to clear
+    // the sea sheet. Tall windows frame from further out, so this follows them.
+    this.controls.maxDistance = Math.min(118, this.framingDistance() * 1.22);
     if (crossed) this.reset();
     this.invalidate("resize");
   }

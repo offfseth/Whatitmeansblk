@@ -13,7 +13,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { feature, mesh } from "topojson-client";
+import { feature, merge, mesh } from "topojson-client";
 import {
   geoAlbersUsa,
   geoConicEqualArea,
@@ -190,6 +190,10 @@ const topology = JSON.parse(
 const states = feature(topology, topology.objects.states);
 // Puerto Rico is outside the Albers-USA composite projection; all 50 states + DC remain.
 const borders = mesh(topology, topology.objects.states);
+// The dissolved outline of the whole landmass, outer rings first and lake holes
+// after, which is what the renderer extrudes the continental slope from. State
+// boundaries are deliberately absent: only the water's edge gets a slope.
+const outline = merge(topology, topology.objects.states.geometries);
 const projection = geoAlbersUsa().scale(1300).translate([487.5, 305]);
 const projectedPath = geoPath(projection);
 const statesPath = geoPath(null)(states); // us-atlas ships pre-projected
@@ -705,6 +709,7 @@ await fs.writeFile(
       height: PROJ_H,
       states,
       borders,
+      outline,
       locations: locations.map((l) => ({
         id: l.id,
         point: projection(l.coordinates),
