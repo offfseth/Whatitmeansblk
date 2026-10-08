@@ -1,5 +1,13 @@
 # Validation
 
+> **Stale in one respect.** This run predates the period slideshow and the
+> period card. Where it says "memorial drift", the build now cross-fades
+> period-filtered plates in front of the canvas instead. The layer is still
+> compositor-only by construction — CSS opacity and transform, a timer that
+> fires once per plate rather than per frame — but that is reasoning, and the
+> numbers below were not re-measured against it.
+
+
 Validated locally on 2026-10-06 using Node 24.12 and Chrome.
 
 - Production build: passes with Vite 7.3.7.

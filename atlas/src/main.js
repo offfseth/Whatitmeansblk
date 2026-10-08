@@ -3,7 +3,13 @@ import { MapScene } from "./map/MapScene.js";
 import { locations } from "./data/locations.js";
 import { eras, getEra, MIN_YEAR, MAX_YEAR } from "./data/eras.js";
 import { createTimeline, visibleLocations } from "./state/timeline.js";
-import { memorial, memorialIsPlaceholder } from "./data/memorial.js";
+import {
+  platesForYear,
+  archiveIsPlaceholder,
+  archiveCredits,
+  unclearedPlates,
+} from "./data/archive.js";
+import { createArchiveStage } from "./ui/archiveStage.js";
 
 const icons = {
   compass: '<circle cx="12" cy="12" r="9"/><path d="m15 9-2 4-4 2 2-4z"/>',
@@ -43,24 +49,27 @@ $("ticks").innerHTML = [1619, 1700, 1800, 1900, MAX_YEAR]
 $("era-buttons").innerHTML = eras
   .map((e) => '<button data-year="' + e.year + '">' + e.year + "</button>")
   .join("");
-// The memorial strip is built twice so the drift can loop without a seam, and
-// is decorative: credits for it live in the footer, not in alt text.
-$("memorial-track").replaceChildren(
-  ...[...memorial, ...memorial].map((plate, index) => {
-    const img = new Image();
-    img.className = "memorial-plate";
-    img.src = plate.src;
-    img.alt = "";
-    img.decoding = "async";
-    if (index) img.loading = "lazy";
-    return img;
-  }),
-);
-$("memorial-credit").textContent = memorialIsPlaceholder
-  ? "Background imagery: generated placeholder plates. They depict no person, place or event, and are stand-ins until licensed archival photographs are sourced and credited."
-  : "Background imagery: " +
-    memorial.map((m) => m.credit).join("; ") +
-    ".";
+// The slideshow behind the map. Plates are decorative in the accessibility
+// tree; what they show is said in the period card and credited in the footer.
+const archiveStage = createArchiveStage($("archive-stage"), (plate) => {
+  $("plate-caption").textContent = plate.caption;
+  // The warning leads, because the credit line is a single clipped line and
+  // the one thing that must never be the part that gets cut is the warning.
+  $("plate-credit").textContent = plate.placeholder
+    ? "Placeholder"
+    : plate.rights === "cleared"
+      ? plate.credit
+      : "Rights not cleared · " + plate.credit;
+});
+$("archive-credit").textContent = [
+  archiveIsPlaceholder
+    ? "Background imagery: generated placeholder plates only. They depict no person, place or event, and are stand-ins until licensed archival photographs are sourced and credited."
+    : "Background imagery: " + archiveCredits().join("; ") + ".",
+  unclearedPlates.length &&
+    "Some plates are shown here for prototype review and their rights have not been cleared for publication.",
+]
+  .filter(Boolean)
+  .join(" ");
 
 const status = $("map-status");
 function showError(message) {
@@ -90,12 +99,16 @@ function render({ year, selectedId }) {
   );
   $("year-slider").setAttribute(
     "aria-valuetext",
-    year + ", " + era.label + ", illustrative layer",
+    year + ", " + era.period + ", illustrative map layer",
   );
   if (document.activeElement !== $("year-input"))
     $("year-input").value = String(year);
   $("era-title").textContent = era.title;
+  $("era-span").textContent = era.span;
+  $("era-period").textContent = era.period;
+  $("era-meaning").textContent = era.meaning;
   $("layer-name").textContent = era.label;
+  archiveStage.setPlates(platesForYear(year));
   document.documentElement.style.setProperty("--era-color", era.color);
   document.querySelectorAll("[data-year]").forEach((button) => {
     const current = Number(button.dataset.year) === era.year;
@@ -175,7 +188,8 @@ document.addEventListener("keydown", (e) => {
 document.addEventListener("visibilitychange", () => {
   if (document.hidden) stopPlayback();
   // Stop compositing the drifting plates while the tab is in the background.
-  document.body.classList.toggle("memorial-paused", document.hidden);
+  document.body.classList.toggle("archive-paused", document.hidden);
+  archiveStage.setHidden(document.hidden);
 });
 $("map").addEventListener("asseterror", () =>
   showError("Some terrain imagery could not load. Reload to try again."),
@@ -190,7 +204,11 @@ try {
     locations,
     (id) => timeline.select(id),
     showError,
+    // The band hangs behind the scene, so it has to lean with the camera or
+    // it reads as a sticker on the glass.
+    (camera) => archiveStage.setView(camera),
   );
+  archiveStage.setView(scene.cameraState());
   render(timeline.get());
   status.hidden = true;
 } catch (error) {
@@ -238,11 +256,18 @@ if (context?.registerTool) {
   }
 }
 if (import.meta.env.DEV)
-  window.__atlas = { getState: timeline.get, stats: () => scene?.stats() };
+  window.__atlas = {
+    getState: timeline.get,
+    stats: () => scene?.stats(),
+    // Camera readings, for checking that layers outside WebGL follow it.
+    camera: () => scene?.cameraState(),
+    eye: () => scene && scene.camera.position.toArray().map((n) => +n.toFixed(2)),
+  };
 if (import.meta.hot)
   import.meta.hot.dispose(() => {
     stopPlayback();
     unsubscribe();
     lifecycle.abort();
+    archiveStage.dispose();
     scene?.dispose();
   });

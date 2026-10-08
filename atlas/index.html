@@ -54,23 +54,35 @@
       </header>
       <main>
         <section class="map-section" aria-label="Map explorer">
-          <div class="memorial" aria-hidden="true">
-            <div class="memorial-track" id="memorial-track"></div>
-            <div class="memorial-veil"></div>
+          <div class="archive" aria-hidden="true">
+            <div class="archive-stage" id="archive-stage"></div>
+            <div class="archive-veil"></div>
           </div>
           <div id="map" class="map">
             <div class="map-status" id="map-status" role="status">
               <span class="loading-dot"></span>Preparing the atlas…
             </div>
           </div>
-          <div class="intro">
-            <div class="eyebrow">
-              <span class="gold-line"></span> A HISTORY IN PLACE
+          <div class="map-rail">
+            <div class="intro">
+              <div class="eyebrow">
+                <span class="gold-line"></span> A HISTORY IN PLACE
+              </div>
+              <h1>A nation. Countless stories.</h1>
+              <p>
+                Move through time.<br />Discover the places that hold our
+                history.
+              </p>
             </div>
-            <h1>A nation. Countless stories.</h1>
-            <p>
-              Move through time.<br />Discover the places that hold our history.
-            </p>
+            <article class="era-card" id="era-card">
+              <div class="eyebrow era-span" id="era-span"></div>
+              <h2 id="era-period"></h2>
+              <p class="era-meaning" id="era-meaning"></p>
+              <div class="era-plate">
+                <span class="era-plate-caption" id="plate-caption"></span>
+                <span class="era-plate-credit" id="plate-credit"></span>
+              </div>
+            </article>
           </div>
           <div class="map-tools" aria-label="Map controls">
             <button
@@ -247,7 +259,7 @@
               exaggerated, and the land colouring is an illustrative palette
               drawn from elevation, slope and position — not a land-cover survey.
             </p>
-            <p id="memorial-credit"></p>
+            <p id="archive-credit"></p>
             <p>
               <a href="/data/us-atlas-LICENSE.txt" target="_blank"
                 >Boundary license</a

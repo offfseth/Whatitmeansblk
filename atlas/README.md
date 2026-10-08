@@ -37,10 +37,10 @@ No API keys, accounts, backend, or live map-tile service are needed. The map ass
 - All 50 states and D.C.; Alaska and Hawaiʻi are explicitly labeled insets in the Albers USA composite projection.
 - Land that descends into the water on a shelf rather than ending in a cut-out wall, modern state outlines, and colour/normal/surface textures baked from real elevation samples.
 - A drawer on the left edge that slides out on hover, pins open on click, and closes on Escape.
-- Native accessible year scrubber, validated year form, five demo snapshot jumps, and optional playback.
+- Native accessible year scrubber, validated year form, six period jumps, and optional playback.
 - Eight data-driven locations. Visibility changes with the year; buttons and the footer location selector open a minimal stub panel. Changing to a year where the selected marker is absent clears selection.
 - Responsive desktop/phone layout, keyboard-accessible controls, loading/error states, WebGL failure messaging, and reduced idle GPU work.
-- A memorial layer of imagery drifting slowly behind the map, tinted and blurred so it stays behind the subject.
+- A period slideshow hanging above the map: archival photographs that cross-fade, filtered to the period the scrubber is in, with a card in front of them naming the period and what it meant.
 - Optional feature-detected WebMCP year action. This does not add a dependency and is ignored in unsupported browsers.
 
 ## Design
@@ -51,13 +51,31 @@ No API keys, accounts, backend, or live map-tile service are needed. The map ass
 
 **Land colour** is hand-authored cartography, not a land-cover dataset. Elevation, slope, latitude and longitude drive a deliberately narrow warm range — sand, red rock, dry and wet grass, hardwood and conifer, tundra, marsh, exposed rock and snow — pulled 30% toward neutral and then warmed, so regional character is carried mostly by value and relief rather than by hue. Two scales of noise keep the continental moisture gradient from banding into a straight seam down the hundredth meridian.
 
-**Water** is treated as a real surface, not blank space. River valleys and lake beds are carved into the elevation grid *before* relief is derived, so the normal map shows genuine incision rather than painted-on lines; a roughness/metalness map makes water hold a sheen where the land stays matte. The sea sheet is coloured by distance from shore (deep basin, shelf, shallows), carries a faint graticule, and shows Canada, Mexico and the Caribbean as quiet dark silhouettes so the Gulf of Mexico, the Great Lakes and both coasts have their true shape. Its alpha is solid over the subject and over enclosed seas and thins across the open ocean, which is what lets the memorial layer through at the left and right of the frame.
+**Water** is treated as a real surface, not blank space. River valleys and lake beds are carved into the elevation grid *before* relief is derived, so the normal map shows genuine incision rather than painted-on lines; a roughness/metalness map makes water hold a sheen where the land stays matte. The sea sheet is coloured by distance from shore (deep basin, shelf, shallows), carries a faint graticule, and shows Canada, Mexico and the Caribbean as quiet dark silhouettes so the Gulf of Mexico, the Great Lakes and both coasts have their true shape. Its alpha is solid over the subject and over enclosed seas and thins across the open ocean, which is what lets the sea read as water rather than as a flat plate.
 
 **The coast.** The land sits only just proud of the water, and the shoreline carries a shelf that steps outward and down from the coast, through a foreshore and the waterline, to a shelf break below the sea. The shelf samples the terrain texture at the shoreline itself, so every coast keeps its own colour as it goes under. A tall plate reads as a cut-out pasted onto a sea however its edge is shaded, so the height difference itself is kept small and relief carries the dimension instead. Islands and lakes narrower than a full shelf get a proportionally narrower one, because otherwise the slope folds back through itself. The shelf is built from the dissolved outline of the landmass (`outline` in `map.json`), so state borders inland are untouched.
 
-**Memorial layer.** `src/data/memorial.js` lists the plates; `public/memorial/` holds them. The strip is duplicated once and driven by a single CSS transform animation, so the blurred plates rasterise once and are then composited — no JavaScript runs per frame, and no WebGL frame is requested. It pauses when the tab is hidden and holds still under `prefers-reduced-motion`.
+**The period band.** A slideshow of archival photographs hangs across the top of the scene, above the continent. `src/data/archive.js` lists the plates and joins each one to a period by `eraYear`; `src/ui/archiveStage.js` cross-fades them. Crossing a period boundary on the scrubber swaps the whole set, so the imagery always belongs to the years on screen.
 
-> **The shipped plates are placeholders and depict nothing.** They are generated paper, emulsion, grain and scratches (`npm run prepare:memorial`). A memorial must not invent its own evidence, so no synthesised photograph of a real person, place or event is used. Replace them with licensed, sourced archival images and fill in `credit` for each; credits render into the footer's "Map notes & credits" panel, and the panel says out loud while only placeholders are loaded.
+It has to paint **in front of** the canvas, not behind it: the scene draws an opaque sea, so a layer behind the map is simply not there. It is inert to the pointer, so orbiting and zooming still work through it, and it is masked out before the coastline so the map is never read through a photograph. Only `opacity` and `transform` move — the blurred plates rasterise once and are then composited, no JavaScript runs per frame, and no WebGL frame is requested. It pauses when the tab is hidden; under `prefers-reduced-motion` it holds the first plate of the period and never advances on its own, though it still changes when the reader changes the year, because that motion is theirs.
+
+**Framing.** Band height is what decides how much of a photograph survives: a wide letterbox shows a slice, not a picture. The band runs at 46% of the scene, which on a typical desktop is still about 6:1, so a 16:9 frame keeps roughly a quarter of its height — enough to read, but only if the right quarter is kept. So each plate declares `focus` — the point in the file the crop must keep, as `[x%, y%]` — which becomes its `object-position`, because the middle of a photograph is rarely the subject in it. A tall portrait should be cut to roughly 16:9 around its subject before it goes in `public/archive/`; the cover-crop cannot recover what the aspect ratio throws away.
+
+**Following the camera.** A backdrop nailed to the screen while the scene orbits underneath it reads as a sticker on the glass, so the band moves with the camera. `MapScene` reports `cameraState()` — yaw, tilt and dolly, each normalised against the control limits rather than raw, so callers never need to know the limits — once per rendered frame, from inside the existing coalescing frame.
+
+`viewTransform` turns that reading into the band's pose. The main move is horizontal: the band is a plane standing in the scene, under the perspective declared on `.archive`, so orbiting swings it on its vertical axis with `rotateY`, as the map itself swings. Under that it pans against the yaw, lifts and fades as the camera tilts towards straight-down (where the land fills the frame and the band has nowhere to be), and rolls half a degree. Each part is a fraction of the camera's own movement, which is what distance looks like.
+
+> **The swing direction is easy to get backwards, and was.** Whichever side the camera stands on is the near side of the world, so that is the edge that must come forward — and CSS `rotateY` brings the *left* edge forward for positive angles. Checking this by eye is unreliable; it is pinned by a test, and was caught by reading the camera's actual position (`window.__atlas.eye()` in dev) against which edge of the band projected taller.
+
+**The overscan is calculated, not guessed.** `.archive-stage` reaches past the band so no camera angle shows an edge, and the amount it needs is solved from the band's real size by `overscanFor` whenever it changes. The cost of the swing is not a fixed fraction of the band: under perspective the receding edge pulls inward by an amount that grows with the band's *width*, and the roll costs half that width times its sine, neither of which a percentage of the band's *height* tracks. The fixed constant this replaced was fine on a laptop and left a 24px gap at 4K. A test re-projects all four corners independently, across seven band sizes and every extreme of the controls, and asserts the band stays covered.
+
+`rotateY` and the roll ride on the stage; the Ken Burns drift rides on the plate — two elements, so the two transforms never fight and neither leaves the compositor.
+
+**The period card.** In front of the band, in the left rail under the headline, `.era-card` names the period, its span, and two sentences on what it meant — from `period`, `span` and `meaning` in `src/data/eras.js` — plus a caption for the plate currently showing. On a short window the rail sheds the standing invitation, then the plate caption, then clamps the summary; every summary is written so its **first sentence stands alone**, because that is what survives the tightest clamp.
+
+**What is loaded.** The Civil Rights Movement period (1954–1967) runs six real photographs in chronological order — Little Rock 1957, the March on Washington 1963, King in 1964, the Civil Rights Act signing, Selma 1965. Five are public domain on a stated basis recorded in each plate's `basis` field: works of the U.S. Army, the U.S. Information Agency and the White House Press Office are works of the federal government, and the two Library of Congress items carry the Library's own "no known restrictions on publication". The sixth, the supplied March on Washington plate, has **uncleared rights** and is marked as such. Every other period still runs generated stand-ins from `public/memorial/` (`npm run prepare:memorial`) that depict paper, emulsion, grain and scratches and nothing else.
+
+> **Nothing here is quietly presented as a record.** A memorial must not invent its own evidence, so no synthesised photograph of a real person, place or event is used. `rights: "cleared"` requires a one-line `basis` saying *why* it is free and a `source` URL that can be rechecked — both enforced by `npm test`. The footer's "Map notes & credits" panel names every real photograph and says out loud which plates are stand-ins and which have uncleared rights, and in the period card the warning leads the credit line so it is never the part that gets clipped.
 
 **Historical limits:** These are modern boundaries and synthetic colored-region/marker visibility examples. They are not historical borders, a verified chronology, or a free/slave-state classification. The fixed demo snapshot years only demonstrate the mechanism. The timeline begins in 1619 as requested; this should not imply that African presence across the Americas began in 1619.
 
@@ -96,8 +114,10 @@ atlas/
     data/
       eras.js                   Swappable illustrative map-state adapter
       locations.js              Location IDs, coordinates and date intervals
-      memorial.js               Background plate list and swap instructions
+      archive.js                Period photographs, rights metadata, era join
       contracts.js              Documented future event/repository contract
+    ui/
+      archiveStage.js           Cross-fading period slideshow, camera lean
     map/
       MapScene.js                Three.js geometry, controls, picking and lifecycle
   public/
@@ -111,13 +131,15 @@ atlas/
       us-atlas-LICENSE.txt
       terrain-attribution.md
     fonts/                      Vendored OFL variable fonts, licenses, @font-face
-    memorial/                   Placeholder plates for the background layer
+    archive/                    Sourced period photographs
+    memorial/                   Generated stand-in plates for periods with none
   scripts/
     prepare-map.mjs              Reproducible asset download and preparation
     prepare-fonts.mjs            One-time typeface vendoring
     prepare-memorial.mjs         Deterministic placeholder plate generation
   tests/
     timeline.test.js            Date boundaries, visibility, state and asset checks
+    archive.test.js             Period copy, plate/era joins, rights disclosure
 ```
 
 Generated/ignored folders: node_modules/, dist/, .cache/. Root README links here. The complete working implementation and assets are in this directory; there are no omitted code snippets or external CDN dependencies at runtime.
@@ -129,13 +151,13 @@ Generated/ignored folders: node_modules/, dist/, .cache/. Root README links here
 ## Performance techniques
 
 1. **Render on demand:** one coalesced requestAnimationFrame per change. No setAnimationLoop, auto-rotation, damping loop, animated water, or idle animation.
-2. **The memorial layer never touches WebGL:** it is one CSS transform animation on a duplicated strip. Blur, mask and tint are applied to the static plates, so they rasterise once and are then composited; the map still renders zero frames while idle.
+2. **The period band never touches WebGL:** cross-fades are CSS opacity transitions and the drift is one CSS transform animation. Blur, mask and tint are applied to the static plates, so they rasterise once and are then composited; a timer fires once per plate, not per frame, and the map still renders zero frames while idle. Only the plates of the current period stay in the DOM; the previous period's are dropped once they have finished fading out.
 3. **Bounded pixel ratio:** at most 1.5×, limiting fill rate on high-DPI phones; low-power WebGL preference (a browser hint, not a guarantee).
 4. **Merged geometry:** one top-surface mesh, one raised base, one border batch, and shared marker geometry. No per-state draw calls.
 5. **Baked relief:** three 1600 × 1001 land textures and one 1400 × 876 sea texture replace a dense terrain mesh, live elevation fetches, and per-frame terrain computation. The sea reuses one texture for colour and alpha.
 6. **No shadows or post-processing:** ambient/directional illumination and a single sea plane.
 7. **Reuse on scrubbing:** update vertex colors/emphasis and marker visibility; do not rebuild geometry, reload textures, or fetch event content per frame.
-8. **Work stops offscreen:** pending map frames, playback and the memorial drift are all stopped when the document is hidden.
+8. **Work stops offscreen:** pending map frames, playback and the slideshow are all stopped when the document is hidden.
 9. **Cleanup:** dispose GPU resources, texture resources, controls, observer and listeners on scene teardown.
 
 Development-only diagnostics are readable on the map canvas: data-frames, data-draw-calls, data-triangles and data-pixel-ratio. These attributes are excluded from production builds. A stationary visible map should not increase data-frames. Measurements here do not substitute for testing actual mid-range phones; no device-wide frame-rate or battery guarantee is claimed.
@@ -161,9 +183,17 @@ npm run prepare:fonts      # re-vendor the OFL typefaces (needs network)
 npm run prepare:memorial   # regenerate the placeholder plates (offline, deterministic)
 ```
 
-## Replace the memorial imagery
+## Add period photographs
 
-See the instructions at the top of `src/data/memorial.js`. In short: drop licensed files into `public/memorial/`, list them with a `credit` for each, and keep the list to roughly six to twelve plates. The visual treatment — blur, tint, opacity and the drift speed — lives in `src/style.css` under `.memorial-plate` and `--memorial-cycle`; it is deliberately gentle enough that a real photograph still reads.
+See the instructions at the top of `src/data/archive.js`. In short: drop the file into `public/archive/`, add an entry with `eraYear` set to the `year` of a period in `src/data/eras.js`, and fill in `caption`, `credit`, `source` and `rights` honestly. `rights: "cleared"` is a claim that someone actually checked the licence; anything else keeps the warning visible in the footer. A cleared plate also needs a one-line `basis` saying why it is free; `npm test` fails without it. Keep roughly four to eight plates per period, ordered by year — the set for one period is cycled, so more plates means a longer loop and more memory held at once.
+
+Good public-domain sources for the empty periods: the Library of Congress Prints & Photographs catalogue, the National Archives catalogue, Smithsonian Open Access and the NYPL public-domain collections. Works of the U.S. federal government (FSA/OWI, WPA, NARA) are generally public domain; mid-century press photographs usually are not.
+
+Dwell, fade and the camera-lean limits live in `src/ui/archiveStage.js` (`DWELL_MS`, `FADE_MS`, `PAN_X`, `PAN_Y`, `LEAN_DEG`, `FADE_FLOOR`); the band's height, mask, overscan, blur, tint and drift live in `src/style.css` under `.archive`, `.archive-stage`, `.archive-plate` and `.archive-veil`. Raising a pan limit without raising the overscan to match will show an edge. The treatment is deliberately gentle enough that a real photograph still reads, and dark enough that the map still wins.
+
+## Change a period or its summary
+
+`src/data/eras.js` holds both the readable history (`period`, `span`, `meaning`) and the illustrative map layer (`label`, `states`, `color`), and the file says which is which. Period boundaries are editorial, not natural; they exist so the map, the slideshow and the card change together. Changing a boundary year moves which photographs appear when, since `archive.js` joins on it. `npm test` checks that spans stay ordered and meet end to end, and that every plate still joins a real period.
 
 ## Add the event content layer next
 

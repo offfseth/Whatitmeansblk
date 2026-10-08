@@ -25,14 +25,18 @@ const COAST_PROFILE = [
 ];
 
 /** Owns WebGL only. Data, dates and event content stay outside this class.
- * The canvas is transparent: the memorial layer lives behind it in the DOM,
- * and the sea sheet thins toward the frame so that imagery can come through. */
+ * The canvas is transparent, but the sea sheet it draws is not: anything put
+ * behind the canvas in the DOM is hidden by the water, which is why the
+ * period slideshow in src/ui/archiveStage.js paints in front of it instead. */
 export class MapScene {
-  constructor(container, data, locations, onSelect, onError) {
+  constructor(container, data, locations, onSelect, onError, onCamera) {
     this.container = container;
     this.data = data;
     this.locations = locations;
     this.onSelect = onSelect;
+    // Told where the camera is looking, once per rendered frame, so layers
+    // outside WebGL (the period band) can follow it.
+    this.onCamera = onCamera;
     this.frame = 0;
     this.framesRendered = 0;
     this.disposed = false;
@@ -518,6 +522,27 @@ export class MapScene {
     this.border.visible = show;
     this.invalidate();
   }
+  /** Where the camera is, normalised against its own limits.
+   *
+   *   yaw   -1 … 1  full left to full right
+   *   tilt   0 … 1  straight down to the most oblique angle allowed
+   *   dolly  0 … 1  closest to furthest
+   *
+   * Normalised rather than raw so that callers never need to know the limits,
+   * and keep working if the limits are retuned. */
+  cameraState() {
+    const c = this.controls;
+    const s = new THREE.Spherical().setFromVector3(
+      this.camera.position.clone().sub(c.target),
+    );
+    const span = (v, lo, hi) =>
+      hi - lo < 1e-6 ? 0 : THREE.MathUtils.clamp((v - lo) / (hi - lo), 0, 1);
+    return {
+      yaw: span(s.theta, c.minAzimuthAngle, c.maxAzimuthAngle) * 2 - 1,
+      tilt: span(s.phi, c.minPolarAngle, c.maxPolarAngle),
+      dolly: span(s.radius, c.minDistance, c.maxDistance),
+    };
+  }
   /** Distance at which the whole map is framed, for the current aspect. */
   framingDistance() {
     return Math.max(
@@ -576,6 +601,7 @@ export class MapScene {
       this.frame = requestAnimationFrame(() => {
         this.frame = 0;
         this.render();
+        this.onCamera?.(this.cameraState());
       });
   }
   render() {

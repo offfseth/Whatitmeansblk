@@ -5,7 +5,8 @@
  *   normals.webp  multi-scale surface normals, with river valleys incised
  *   surface.webp  G = roughness, B = metalness, so water catches light as water
  *   sea.webp      sea colour by distance from shore, neighbouring land, graticule,
- *                 and an alpha field that lets the memorial layer show through
+ *                 and an alpha field that keeps the open ocean from reading
+ *                 as a flat plate
  *
  * The biome palette is hand-authored cartography driven by longitude, latitude,
  * elevation and slope. It is an illustrative portrait of the American landscape,
@@ -681,7 +682,7 @@ for (let y = 0; y < SEA_H; y++)
 
     // Alpha. The sheet is solid over the subject and over any enclosed sea --
     // the Gulf, the Great Lakes, the Caribbean -- and thins out across the open
-    // ocean, so the memorial drifts through the empty water at the left and
+    // ocean, so the open water keeps some depth at the left and
     // right of the frame rather than behind the map itself.
     const nearUs = smoothstep(200, 30, toUs[i]);
     const nearAnyLand = smoothstep(170, 20, d);

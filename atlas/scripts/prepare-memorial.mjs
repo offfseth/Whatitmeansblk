@@ -5,7 +5,8 @@
  * depicted. Fabricating or synthesising imagery of real historical subjects
  * would be dishonest in a memorial, so the placeholders only supply the
  * texture and tonal rhythm of an archive until licensed, sourced photographs
- * replace them in src/data/memorial.js.
+ * replace them. They stand in for the periods that have no photograph yet;
+ * src/data/archive.js says which, and how to swap one out.
  *
  * Output is deterministic: the same seed always rebuilds the same plates. */
 import fs from "node:fs/promises";

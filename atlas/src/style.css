@@ -296,82 +296,122 @@ main {
   flex-direction: column;
 }
 
-/* ----------------------------------------------------------- map and memorial */
+/* ------------------------------------------------- map, archive and period */
 .map-section {
   position: relative;
   flex: 1;
-  min-height: 400px;
+  min-height: 430px;
   overflow: hidden;
   background: var(--ink-900);
 }
-/* The archive drifts behind the map: slow, level, never looping back on itself.
-   Only the track moves, and only by transform, so the blurred plates are
-   rasterised once and then composited. */
-.memorial {
+/* The archive band hangs across the top of the scene, above the land. Its
+   plates belong to the period on the scrubber and are swapped when the reader
+   crosses into another one. Only opacity and transform move, so the blurred
+   plates are rasterised once and then composited.
+
+   It has to sit IN FRONT of the canvas: the scene paints an opaque sea, so
+   anything behind the map is simply not there. It is inert to the pointer, so
+   orbiting and zooming still work through it, and it dissolves well before
+   the land so the map is never looked at through a photograph. */
+.archive {
   position: absolute;
-  inset: 0;
-  z-index: 0;
+  inset: 0 0 auto 0;
+  height: clamp(240px, 46%, 540px);
+  z-index: 2;
+  pointer-events: none;
   overflow: hidden;
-}
-.memorial-track {
-  --memorial-cycle: 260s;
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: stretch;
-  width: max-content;
-  will-change: transform;
-  animation: memorial-drift var(--memorial-cycle) linear infinite;
-}
-@keyframes memorial-drift {
-  from {
-    transform: translate3d(0, 0, 0);
-  }
-  to {
-    transform: translate3d(-50%, 0, 0);
-  }
-}
-.memorial-plate {
-  flex: 0 0 auto;
-  width: clamp(260px, 24vw, 460px);
-  height: 100%;
-  object-fit: cover;
-  /* Plates stay individually legible rather than melting into one wash: a
-     procession of images, not a gradient. */
-  margin-right: -1.6vw;
-  opacity: 0.84;
-  filter: blur(4px) saturate(0.6) contrast(1) brightness(0.86);
+  /* The band is a plane standing in the scene, so it needs somewhere to
+     stand: this is what lets .archive-stage swing on its vertical axis
+     instead of just skewing. The origin sits high, where the horizon is. */
+  perspective: 1500px;
+  perspective-origin: 50% 38%;
   -webkit-mask-image: linear-gradient(
-    90deg,
-    transparent,
-    #000 11%,
-    #000 89%,
-    transparent
+    180deg,
+    #000 0 36%,
+    #0000008c 68%,
+    transparent 97%
   );
   mask-image: linear-gradient(
-    90deg,
-    transparent,
-    #000 11%,
-    #000 89%,
-    transparent
+    180deg,
+    #000 0 36%,
+    #0000008c 68%,
+    transparent 97%
   );
 }
-.memorial-paused .memorial-track {
+/* The stage carries the camera lean. Overscan covers the pan and the lean
+   so no angle can bring an edge into frame — it is sized from PAN_X/PAN_Y and
+   LEAN_DEG in src/ui/archiveStage.js, so the two move together. Transform
+   only: the plate keeps its own drift, and neither leaves the compositor. */
+.archive-stage {
+  position: absolute;
+  /* Solved from the band's real size in src/ui/archiveStage.js; the
+     fallbacks only have to hold for the frame before that first runs. */
+  inset: calc(-1 * var(--overscan-y, 34px)) calc(-1 * var(--overscan-x, 96px));
+  transform: translate3d(var(--view-x, 0%), var(--view-y, 0%), 0)
+    rotateY(var(--view-turn, 0deg)) rotate(var(--view-lean, 0deg));
+  opacity: var(--view-fade, 1);
+  transition: opacity 240ms linear;
+  will-change: transform;
+}
+.archive-plate {
+  --archive-fade: 1500ms;
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  /* Each plate says where its subject is; the band is a wide letterbox and
+     the middle of a photograph is rarely the thing in it. See `focus` in
+     src/data/archive.js. */
+  object-position: var(--focus-x, 50%) var(--focus-y, 42%);
+  opacity: 0;
+  transform: scale(1.02);
+  transition: opacity var(--archive-fade) ease;
+  filter: blur(2px) saturate(0.55) contrast(1.04) brightness(0.92) sepia(0.18);
+  will-change: opacity, transform;
+}
+.archive-plate.is-current {
+  opacity: 0.92;
+  animation: archive-drift 14s ease-out both;
+}
+.archive-plate.is-current.drift-back {
+  animation-direction: reverse;
+}
+@keyframes archive-drift {
+  from {
+    transform: scale(1.02) translate3d(0.5%, 0.4%, 0);
+  }
+  to {
+    transform: scale(1.06) translate3d(-0.5%, -0.4%, 0);
+  }
+}
+.archive-paused .archive-plate.is-current {
   animation-play-state: paused;
 }
 /* Tint the imagery into the page palette and sink it behind the map. */
-.memorial-veil {
+.archive-veil {
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(
-      ellipse 78% 70% at 50% 48%,
-      #100c09cc,
-      #100c0982 60%,
-      #100c09d6 100%
+    linear-gradient(
+      180deg,
+      #100c0999,
+      #100c0924 22%,
+      #100c0957 58%,
+      #100c09c9 84%,
+      #100c09 100%
     ),
-    linear-gradient(180deg, #100c09f2, #100c092e 24%, #100c093b 72%, #100c09f2),
-    linear-gradient(90deg, #100c09cc, #100c0900 13%, #100c0900 87%, #100c09cc);
+    linear-gradient(90deg, #100c09c4, #100c0900 20%, #100c0900 80%, #100c09c4);
+}
+/* A breath of the period's colour, so the band shifts with the legend. */
+.archive-veil::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--era-color);
+  opacity: 0.07;
+  mix-blend-mode: soft-light;
+  transition: background 600ms ease;
 }
 .map {
   position: absolute;
@@ -384,13 +424,80 @@ main {
   display: block;
   touch-action: none;
 }
-.intro {
+/* One left-hand column of text in front of the archive band: the standing
+   invitation, then the period the scrubber is sitting in. */
+.map-rail {
   position: absolute;
   top: 32px;
   left: var(--gutter);
-  pointer-events: none;
   z-index: 2;
-  max-width: 330px;
+  width: min(355px, 40vw);
+  max-height: calc(100% - 150px);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 17px;
+  pointer-events: none;
+}
+.intro {
+  pointer-events: none;
+}
+.era-card {
+  pointer-events: auto;
+  border-left: 2px solid var(--era-color);
+  background: #19120de3;
+  backdrop-filter: blur(3px);
+  padding: 13px 16px 14px;
+  min-height: 0;
+  transition: border-color 600ms ease;
+}
+.era-card .era-span {
+  color: var(--brass);
+  font-size: 11px;
+}
+.era-card h2 {
+  font-size: 22px;
+  line-height: 1.14;
+  margin: 8px 0 9px;
+}
+.era-meaning {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.62;
+  color: var(--paper-dim);
+  /* The card must not grow into the legend on a short window; the full text
+     is short enough that this almost never bites. */
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 6;
+  line-clamp: 6;
+  overflow: hidden;
+}
+.era-plate {
+  margin-top: 11px;
+  padding-top: 10px;
+  border-top: 1px solid var(--rule);
+  display: grid;
+  gap: 3px;
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: var(--paper-mute);
+}
+.era-plate-caption {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+}
+.era-plate-credit {
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  font-size: 10px;
+  color: #94836da8;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .intro .eyebrow {
   color: var(--brass);
@@ -966,12 +1073,19 @@ select {
   .map-section {
     min-height: 500px;
   }
-  .intro {
+  .map-rail {
     top: 46px;
-    max-width: 400px;
+    width: min(420px, 34vw);
+    gap: 26px;
   }
   .intro h1 {
     font-size: 46px;
+  }
+  .era-card h2 {
+    font-size: 25px;
+  }
+  .era-meaning {
+    font-size: 14px;
   }
   .timeline {
     padding-top: 30px;
@@ -990,13 +1104,26 @@ select {
   .masthead-caption {
     display: none;
   }
-  .intro {
-    left: var(--gutter);
+  .map-rail {
     top: 24px;
-    max-width: 260px;
+    width: min(290px, 52vw);
+    gap: 14px;
   }
   h1 {
     font-size: 29px;
+  }
+  /* The period card says "move through time" better than the standing line
+     does, and there is only room for one of them. */
+  .intro p {
+    display: none;
+  }
+  .era-card h2 {
+    font-size: 19px;
+  }
+  .era-meaning {
+    font-size: 12.5px;
+    -webkit-line-clamp: 6;
+    line-clamp: 6;
   }
   .map-bottom {
     left: var(--gutter);
@@ -1015,8 +1142,8 @@ select {
     right: 27px;
     bottom: 95px;
   }
-  .memorial-plate {
-    width: clamp(260px, 46vw, 420px);
+  .archive {
+    height: clamp(205px, 40%, 360px);
   }
   .timeline {
     padding: 12px 22px 10px var(--gutter);
@@ -1095,19 +1222,34 @@ select {
     margin-left: 4px;
   }
   .map-section {
-    min-height: 405px;
+    min-height: 460px;
   }
-  .intro {
-    left: var(--gutter);
+  .map-rail {
     top: 20px;
-    max-width: 215px;
+    width: min(238px, 62vw);
+    gap: 12px;
+    max-height: calc(100% - 96px);
   }
   .intro h1 {
     font-size: 25px;
     margin: 12px 0 9px;
   }
-  .intro p {
-    font-size: 13px;
+  .era-card {
+    padding: 10px 12px 11px;
+  }
+  .era-card h2 {
+    font-size: 17px;
+    margin: 6px 0 7px;
+  }
+  .era-meaning {
+    font-size: 12px;
+    line-height: 1.55;
+    -webkit-line-clamp: 5;
+    line-clamp: 5;
+  }
+  /* At this width the photo credit is the first thing worth losing. */
+  .era-plate-credit {
+    display: none;
   }
   .map-tools {
     right: 12px;
@@ -1162,9 +1304,11 @@ select {
   .credits summary {
     white-space: nowrap;
   }
-  .memorial-plate {
-    width: clamp(220px, 62vw, 340px);
-    filter: blur(6px) saturate(0.5) contrast(0.84) brightness(0.66);
+  .archive {
+    height: clamp(180px, 36%, 280px);
+  }
+  .archive-plate {
+    filter: blur(3px) saturate(0.5) contrast(0.96) brightness(0.8) sepia(0.2);
   }
   .timeline {
     padding: 11px 18px 9px var(--gutter);
@@ -1263,13 +1407,49 @@ select {
   }
 }
 
+/* Short windows: the left rail, the legend and the scrubber are all competing
+   for the same column of pixels. Shed the rail from the least load-bearing
+   part up. Every period summary is written so its first sentence stands on
+   its own, which is what survives the tightest clamp. */
+@media (max-height: 880px) {
+  .intro p {
+    display: none;
+  }
+}
+@media (max-height: 800px) {
+  .era-meaning {
+    -webkit-line-clamp: 4;
+    line-clamp: 4;
+  }
+  .era-plate {
+    display: none;
+  }
+}
+@media (max-height: 700px) {
+  .intro h1 {
+    font-size: 26px;
+  }
+  .era-card h2 {
+    font-size: 19px;
+  }
+  .era-meaning {
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   * {
     scroll-behavior: auto !important;
   }
-  /* The memorial holds still rather than disappearing: the imagery is part of
-     the piece, the movement is not. */
-  .memorial-track {
+  /* The archive holds still rather than disappearing: the imagery is part of
+     the piece, the movement is not. Plates still change when the reader moves
+     the timeline — that motion is theirs. */
+  .archive-plate.is-current {
     animation: none;
+    transform: scale(1.02);
+  }
+  .archive-plate {
+    --archive-fade: 1ms;
   }
 }
