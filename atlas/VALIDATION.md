@@ -31,4 +31,13 @@ Validated locally on 2026-10-06 using Node 24.12 and Chrome.
 - Production JavaScript: approximately 557 KB raw / 144 KB gzip. CSS approximately 15 KB raw / 4 KB gzip. Vite emits its standard 500 KB chunk-size advisory because Three.js is bundled. No build error.
 - No WebGL errors observed during normal operation.
 
-Limits: responsive emulation is not a physical-phone GPU/battery benchmark. No unsupported frame-rate or battery-life guarantee is made. Headless software rendering (SwiftShader) was used for screenshots, so it measures correctness and draw-call counts, not real GPU frame timing. Real multitouch gestures and forced WebGL-context loss were not device-tested. The blurred memorial layer was not profiled on a low-end mobile GPU; it is compositor-only by construction, but that is reasoning, not a measurement. WebMCP registration was not validated in a supported agent-enabled page context; it is optional and feature-detected. Historical highlights are illustrative, not fact-checked history, and the land palette is illustrative cartography rather than land-cover data.
+Limits: responsive emulation is not a physical-phone GPU/battery benchmark. No unsupported frame-rate or battery-life guarantee is made. Headless software rendering (SwiftShader) was used for screenshots, so it measures correctness and draw-call counts, not real GPU frame timing. Real multitouch gestures and forced WebGL-context loss were not device-tested. The blurred memorial layer was not profiled on a low-end mobile GPU; it is compositor-only by construction, but that is reasoning, not a measurement. WebMCP registration was not validated in a supported agent-enabled page context; it is optional and feature-detected. The earlier highlight checks below describe the former illustrative layer. The historical layer is validated in the latest section; terrain colors remain illustrative cartography rather than land-cover data.
+
+## City story navigation — October 9, 2026
+
+- Existing suite plus place/camera tests: all 32 tests pass.
+- Production Vite build passes; existing Three.js bundle-size advisory remains.
+- Chrome desktop (2560 × 1305): Washington marker selection, transition, split hero, return to map, browser history.
+- Chrome mobile viewport (390 × 844): article navigation, no horizontal overflow in the city page, related-place navigation, direct-link reload, return to map, and cancellation during descent.
+- Unit coverage: each city has cited sections and local visual assets, route validation/year boundaries, finite animation, cancellation, reduced-motion timing, tab hiding, camera targeting beyond normal pan limits, and restoration of controls/view.
+- Washington and Montgomery use existing cleared archive images. Six remaining city collections explicitly show geographic context and an empty photographic archive. No external asset downloads or runtime dependencies added.

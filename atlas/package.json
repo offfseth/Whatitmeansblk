@@ -10,7 +10,9 @@
     "test": "node --test tests/*.test.js",
     "prepare:map": "node scripts/prepare-map.mjs",
     "prepare:fonts": "node scripts/prepare-fonts.mjs",
-    "prepare:memorial": "node scripts/prepare-memorial.mjs"
+    "prepare:memorial": "node scripts/prepare-memorial.mjs",
+    "prepare:places": "node scripts/prepare-place-plates.mjs",
+    "prepare:history": "node scripts/prepare-history.mjs"
   },
   "dependencies": {
     "three": "0.180.0"

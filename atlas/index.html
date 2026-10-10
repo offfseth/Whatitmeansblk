@@ -6,7 +6,7 @@
     <meta name="theme-color" content="#120d0a" />
     <meta
       name="description"
-      content="Explore an interactive 3D map and timeline for a future atlas of African American history."
+      content="Explore African American history through an interactive 3D atlas, city stories, and archival photographs."
     />
     <title>Black Atlas — A history in place</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
@@ -16,269 +16,167 @@
   </head>
   <body>
     <div id="app">
-      <nav class="drawer" id="drawer" aria-label="About this atlas">
-        <button
-          class="drawer-handle"
-          id="drawer-handle"
-          aria-expanded="false"
-          aria-controls="drawer-body"
-        >
+      <aside class="drawer" id="drawer" aria-label="About this atlas">
+        <button class="drawer-handle" id="drawer-handle" aria-expanded="false" aria-controls="drawer-body" aria-label="About this atlas">
           <span class="drawer-handle-icon" data-icon="menu"></span>
-          <span class="drawer-handle-text">About</span>
+          <span class="drawer-handle-text">The project</span>
+          <span class="drawer-handle-foot" aria-hidden="true">BA</span>
         </button>
-        <div class="drawer-body" id="drawer-body">
-          <div class="eyebrow">THE ATLAS</div>
-          <h2>About this project</h2>
-          <p>
-            Placeholder. This drawer is where background on the project, how to
-            read the map, and the people behind it will live.
-          </p>
-          <ul class="drawer-links">
-            <li><a href="#">How to read this map</a></li>
-            <li><a href="#">Sources &amp; method</a></li>
-            <li><a href="#">The timeline, and why it starts in 1619</a></li>
-            <li><a href="#">Contributors</a></li>
-            <li><a href="#">Get in touch</a></li>
-          </ul>
-          <p class="drawer-note">
-            Content is a placeholder while the structure is being built.
-          </p>
+        <div class="drawer-body" id="drawer-body" aria-labelledby="drawer-title" inert>
+          <div class="drawer-top"><span class="eyebrow">Behind the atlas</span><button class="icon-button" data-close-drawer aria-label="Close about this atlas" data-icon="close"></button></div>
+          <h2 id="drawer-title">History belongs<br>to all of us.</h2>
+          <p class="drawer-introduction">Black Atlas brings African American history back to the places where people lived it.</p>
+          <div class="drawer-sections">
+            <details open><summary><span>01</span> About the project</summary><div class="drawer-detail"><p>A place to follow the connections between a street, a city, a movement, and the people who made it matter.</p><p>This atlas is still taking shape. The photographs have individual credits; city pages bring together sourced introductions, and dated map layers follow the selected year.</p></div></details>
+            <details><summary><span>02</span> How to explore</summary><div class="drawer-detail"><p>Choose a chapter to change the photographs and the map together. Move the timeline to a particular year, or select a place on the map.</p><p>Drag to turn the map. Scroll or pinch to zoom. Right-drag to pan. The reset button brings you home.</p><p>The timeline starts in 1619. African presence in the Americas reaches further back; this is a starting point for this atlas, not the beginning of that history.</p></div></details>
+            <details><summary><span>03</span> About the author</summary><div class="drawer-detail"><p id="author-bio">A personal introduction from the creator will be added here as the project develops.</p></div></details>
+            <details><summary><span>04</span> Sources &amp; method</summary><div class="drawer-detail"><p>Historical jurisdictions use the Newberry Library’s Atlas of Historical County Boundaries (1783–2000). Later years use modern Census boundaries. The terrain and coastline remain a modern geographic reference, with Alaska and Hawaiʻi insets.</p><p>Boundaries are sampled on December 31. Civil War colors show state affiliations, including border states that remained in the Union. They do not show military occupation. Every photograph has its own date and credit.</p><p><a href="/data/terrain-attribution.md" target="_blank" rel="noreferrer">Read the terrain attribution ↗</a></p></div></details>
+            <details><summary><span>05</span> Leave feedback</summary><div class="drawer-detail" id="feedback-content"><p>Something missing? A story that deserves a place here? A direct feedback channel is being prepared.</p><p class="drawer-small">Contact details will appear here when they’re available.</p></div></details>
+          </div>
+          <p class="drawer-signoff">A history in place.<br><span>Black Atlas</span></p>
         </div>
-      </nav>
-      <header class="masthead">
-        <a class="brand" href="./" aria-label="Black Atlas home"
-          ><span class="brand-mark" data-icon="compass"></span
-          ><span>BLACK<span class="brand-light">ATLAS</span></span></a
-        ><span class="masthead-caption">AFRICAN AMERICAN HISTORY, IN PLACE</span
-        ><span class="edition">EXPLORER <span>01</span></span>
-      </header>
-      <main>
-        <section class="map-section" aria-label="Map explorer">
-          <div class="archive" aria-hidden="true">
-            <div class="archive-stage" id="archive-stage"></div>
-            <div class="archive-veil"></div>
-          </div>
-          <div id="map" class="map">
-            <div class="map-status" id="map-status" role="status">
-              <span class="loading-dot"></span>Preparing the atlas…
-            </div>
-          </div>
-          <div class="map-rail">
-            <div class="intro">
-              <div class="eyebrow">
-                <span class="gold-line"></span> A HISTORY IN PLACE
+      </aside>
+      <button class="drawer-backdrop" id="drawer-backdrop" aria-label="Close about this atlas" tabindex="-1" hidden></button>
+      <div class="page-content" id="page-content">
+        <main>
+          <div id="atlas-view">
+          <!-- One room. The photograph is the air in it, the land is the floor,
+               and everything else is glass held against the walls. -->
+          <section class="stage" id="stage" aria-label="The atlas">
+            <div class="sky" id="sky" aria-hidden="true"></div>
+            <div id="map" class="map">
+              <div class="map-status" id="map-status" role="status">
+                <span class="loading-dot"></span>Preparing the atlas…
               </div>
-              <h1>A nation. Countless stories.</h1>
-              <p>
-                Move through time.<br />Discover the places that hold our
-                history.
-              </p>
             </div>
-            <article class="era-card" id="era-card">
-              <div class="eyebrow era-span" id="era-span"></div>
+            <div class="stage-scrim" aria-hidden="true"></div>
+
+            <header class="masthead">
+              <a class="brand" href="./" aria-label="Black Atlas home">Black Atlas<span class="brand-dot">.</span></a>
+              <span class="masthead-caption">African American history, in place</span>
+              <nav class="chapter-rail" id="chapter-filters" aria-label="Choose a chapter">
+                <div class="era-buttons" id="era-buttons" role="group" aria-label="Filter by historical period"></div>
+              </nav>
+            </header>
+
+            <!-- Pointer-transparent: your first drag both dismisses this and
+                 turns the land underneath it. -->
+            <div class="overture" id="overture">
+              <h1>Black history.<br><em>On the map.</em></h1>
+              <p>Places carry memory. Follow the people, the movements,<br class="wide-break"> and the lives that shaped them.</p>
+              <span class="overture-hint">Turn the land · choose a chapter · move through the years</span>
+            </div>
+
+            <figure class="archive-feature" id="archive-feature" aria-label="Photographs from this chapter">
+              <span class="rail-label">The archive <span aria-hidden="true">→</span></span>
+              <div class="archive-frame">
+                <div class="archive" aria-hidden="true"><div class="archive-stage" id="archive-stage"></div></div>
+                <div class="archive-empty" id="archive-empty" hidden><span class="eyebrow">The archive is growing</span><span id="archive-empty-years"></span><p>Photographs for this chapter are still being gathered.</p></div>
+                <span class="photo-year" id="photo-year"></span>
+              </div>
+              <figcaption class="era-plate"><span id="plate-caption"></span><span class="era-plate-credit" id="plate-credit"></span><a id="plate-source" target="_blank" rel="noreferrer" hidden>View source ↗</a></figcaption>
+              <div class="photo-controls" id="photo-controls"><span id="plate-count"></span><button class="icon-button" id="photo-prev" aria-label="Previous photograph">←</button><button class="icon-button" id="photo-pause" aria-label="Pause photographs" data-icon="pause"></button><button class="icon-button" id="photo-next" aria-label="Next photograph">→</button></div>
+            </figure>
+
+            <article class="chapter" id="era-card" aria-labelledby="era-period">
+              <span class="rail-label"><span aria-hidden="true">←</span> <span id="chapter-number"></span></span>
+              <span class="era-span" id="era-span"></span>
               <h2 id="era-period"></h2>
               <p class="era-meaning" id="era-meaning"></p>
-              <div class="era-plate">
-                <span class="era-plate-caption" id="plate-caption"></span>
-                <span class="era-plate-credit" id="plate-credit"></span>
-              </div>
+              <a class="chapter-more" href="#notes">Notes &amp; credits <span aria-hidden="true">↓</span></a>
             </article>
-          </div>
-          <div class="map-tools" aria-label="Map controls">
-            <button
-              id="zoom-in"
-              title="Zoom in"
-              aria-label="Zoom in"
-              data-icon="plus"
-            ></button
-            ><button
-              id="zoom-out"
-              title="Zoom out"
-              aria-label="Zoom out"
-              data-icon="minus"
-            ></button
-            ><span class="tool-divider"></span
-            ><button
-              id="top-view"
-              title="View from above"
-              aria-label="View from above"
-              data-icon="layers"
-            ></button
-            ><button
-              id="reset-view"
-              title="Reset view"
-              aria-label="Reset view"
-              data-icon="reset"
-            ></button>
-          </div>
-          <div class="orientation" aria-hidden="true">
-            <span>N</span><span data-icon="compass"></span>
-          </div>
-          <div class="map-bottom">
-            <div class="legend">
-              <div class="legend-title">ILLUSTRATIVE LAYER</div>
-              <div>
-                <i class="legend-swatch"></i
-                ><span id="layer-name">Coastal focus</span
-                ><i class="legend-pin"></i><span>Location</span>
+
+            <aside class="map-history" aria-label="This year on the map">
+              <span class="history-kicker" id="boundary-date"></span>
+              <h2 id="boundary-title"></h2>
+              <div class="history-jumps" aria-label="Explore landmark years">
+                <button data-map-year="1786">1786</button><button data-map-year="1863">1863</button><button data-map-year="1963">1963</button><button data-map-year="2026">Today</button>
               </div>
-              <p>Modern borders · demo highlights</p>
+              <div class="history-legend" id="history-legend" aria-label="Map legend"></div>
+              <details class="history-details"><summary>About these boundaries</summary><p id="boundary-note"></p><p>This layer records U.S. jurisdictions and selected claims. Indigenous nations and sovereignty are not fully represented. Terrain and coastline provide modern geographic context.</p><a href="/data/history-attribution.md" target="_blank">Method &amp; sources ↗</a><ul id="jurisdiction-list"></ul></details>
+              <div class="history-places"><span id="place-coverage" role="status"></span><label for="location-picker">Explore a place</label><select id="location-picker" aria-label="Select a visible location"><option value="">Select a place</option></select><button id="coverage-next" hidden></button></div>
+            </aside>
+
+            <div class="map-tools" aria-label="Map controls">
+              <button id="zoom-in" title="Zoom in" aria-label="Zoom in" data-icon="plus"></button
+              ><button id="zoom-out" title="Zoom out" aria-label="Zoom out" data-icon="minus"></button
+              ><span class="tool-divider"></span
+              ><button id="top-view" title="View from above" aria-label="View from above" data-icon="layers"></button
+              ><button id="reset-view" title="Reset view" aria-label="Reset view" data-icon="reset"></button>
             </div>
             <div class="layer-toggles">
               <label><input id="relief" type="checkbox" checked /> Relief</label
-              ><label
-                ><input id="borders" type="checkbox" checked /> Borders</label
-              >
+              ><label><input id="borders" type="checkbox" checked /> Borders</label>
             </div>
-          </div>
-          <aside
-            class="selection"
-            id="selection"
-            hidden
-            aria-labelledby="selection-name"
-            aria-live="polite"
-          >
-            <button
-              id="close-selection"
-              class="close"
-              aria-label="Close location details"
-              data-icon="close"
-            ></button>
-            <div class="eyebrow">SELECTED LOCATION</div>
-            <h2 id="selection-name"></h2>
-            <p id="selection-region"></p>
-            <div class="selection-year">
-              <span id="selection-date"></span> <span>LOCATION PREVIEW</span>
+            <div class="orientation" aria-hidden="true">
+              <span>N</span><span data-icon="compass"></span>
             </div>
-            <p>Stories, photographs, and historical context will live here.</p>
-            <p class="stub-note">
-              This is a placeholder. No event records have been added.
-            </p>
-          </aside>
-        </section>
-        <section class="timeline" aria-label="History timeline">
-          <div class="timeline-top">
-            <div class="current-date">
-              <span class="eyebrow">EXPLORE THE YEAR</span
-              ><output id="year-output">1619</output>
-            </div>
-            <div class="era-caption">
-              <span class="eyebrow">TIME & PLACE</span>
-              <h2 id="era-title"></h2>
-              <span class="demo-note" id="timeline-note"
-                >Demonstration timeline · historical layers coming later</span
-              >
-            </div>
-            <form id="year-form">
-              <label for="year-input">Jump to year</label>
-              <div>
-                <input
-                  id="year-input"
-                  type="number"
-                  min="1619"
-                  value="1619"
-                  required
-                  inputmode="numeric"
-                  aria-label="Jump to year"
-                /><button type="submit">Go</button>
+
+
+            <!-- The years run along the bottom edge of the room, not in a panel. -->
+            <section class="timeline" aria-label="History timeline">
+              <div class="now">
+                <output id="year-output">1619</output>
+                <span class="now-chapter" id="era-title"></span>
               </div>
-            </form>
-          </div>
-          <div class="scrubber-row">
-            <button
-              class="play"
-              id="play"
-              aria-label="Play timeline"
-              title="Play timeline"
-              data-icon="play"
-            ></button>
-            <div class="track-wrap">
-              <input
-                id="year-slider"
-                type="range"
-                min="1619"
-                step="1"
-                value="1619"
-                aria-label="Year"
-                aria-describedby="timeline-note"
-              />
-              <div class="ticks" id="ticks"></div>
+              <button class="play" id="play" aria-label="Play timeline" title="Play timeline" data-icon="play"></button>
+              <div class="track-wrap">
+                <input id="year-slider" type="range" min="1619" step="1" value="1619" aria-label="Year" aria-describedby="timeline-note" />
+                <div class="ticks" id="ticks"></div>
+              </div>
+              <form id="year-form">
+                <label for="year-input">Jump to year</label>
+                <div>
+                  <input id="year-input" type="number" min="1619" value="1619" required inputmode="numeric" aria-label="Jump to year" /><button type="submit">Go</button>
+                </div>
+              </form>
+              <p class="layer-note"><span id="layer-name"></span><span class="demo-note" id="timeline-note">Historical boundaries · year-end snapshots</span></p>
+            </section>
+          </section>
+
+          <!-- Reached by intent, slides up over the room. -->
+          <section class="notes" id="notes" aria-label="Notes and credits">
+            <div class="notes-inner">
+              <h2>About this prototype</h2>
+              <p class="notes-lead">
+                City markers follow the inclusive date ranges of published stories, not city lifespans. Historical jurisdiction boundaries cover 1783–2000; earlier years show geographic context without state lines. Later years use modern Census boundaries. This layer records U.S. jurisdictions and selected claims, not the full geography of Indigenous nations or sovereignty.
+              </p>
+              <div class="notes-grid">
+                <div>
+                  <span class="eyebrow">Photographs</span>
+                  <p id="archive-credit"></p>
+                </div>
+                <div>
+                  <span class="eyebrow">Map data</span>
+                  <p>
+                    Historical boundaries: <a href="https://publications.newberry.org/ahcb/pages/United_States.html" target="_blank" rel="noreferrer">Newberry Library, Atlas of Historical County Boundaries</a>. Civil War affiliations: <a href="https://www.nps.gov/civilwar/facts.htm" target="_blank" rel="noreferrer">National Park Service</a>. <a href="/data/history-attribution.md" target="_blank">Historical map method &amp; sources</a>. Modern reference:
+                    <a href="https://github.com/topojson/us-atlas" target="_blank" rel="noreferrer">U.S. Atlas / U.S. Census Bureau</a>
+                    (ISC). Elevation:
+                    <a href="https://github.com/tilezen/joerd" target="_blank" rel="noreferrer">Mapzen terrain tiles</a>,
+                    USGS 3DEP / GMTED2010 / SRTM and NOAA ETOPO1. Rivers, lakes and neighbouring
+                    coastlines: <a href="https://www.naturalearthdata.com/" target="_blank" rel="noreferrer">Natural Earth</a>
+                    (public domain). Relief has been downsampled and visually exaggerated, and
+                    the land colouring is an illustrative palette drawn from elevation, slope
+                    and position — not a land-cover survey.
+                  </p>
+                  <p>
+                    <a href="/data/us-atlas-LICENSE.txt" target="_blank">Boundary license</a> ·
+                    <a href="/data/terrain-attribution.md" target="_blank">Full terrain attribution</a>
+                  </p>
+                </div>
+              </div>
+              <footer>
+                <span>An atlas in progress <span class="footer-divider">/</span> <span id="date-range"></span></span>
+                <span>Stories grow as the archive grows.</span>
+              </footer>
             </div>
+          </section>
           </div>
-          <div class="timeline-bottom">
-            <div
-              class="era-buttons"
-              id="era-buttons"
-              aria-label="Jump to demonstration snapshot"
-            ></div>
-            <span class="interaction-hint"
-              >Drag to orbit · Scroll to zoom · Right-drag to pan</span
-            >
-          </div>
-        </section>
-      </main>
-      <footer>
-        <span
-          >PROTOTYPE ATLAS <span class="footer-divider">/</span>
-          <span id="date-range"></span
-        ></span>
-        <details class="credits">
-          <summary>Map notes & credits</summary>
-          <div>
-            <h2>About this prototype</h2>
-            <p>
-              These are modern boundaries, including Alaska and Hawaiʻi insets.
-              Colored regions and marker dates are synthetic demonstrations, not
-              historical claims or a map of slavery. The timeline begins in
-              1619; this is not the beginning of African presence throughout the
-              Americas.
-            </p>
-            <p>
-              Boundaries:
-              <a
-                href="https://github.com/topojson/us-atlas"
-                target="_blank"
-                rel="noreferrer"
-                >U.S. Atlas / U.S. Census Bureau</a
-              >
-              (ISC). Elevation:
-              <a
-                href="https://github.com/tilezen/joerd"
-                target="_blank"
-                rel="noreferrer"
-                >Mapzen terrain tiles</a
-              >, USGS 3DEP / GMTED2010 / SRTM and NOAA ETOPO1. Rivers, lakes and
-              neighbouring coastlines:
-              <a
-                href="https://www.naturalearthdata.com/"
-                target="_blank"
-                rel="noreferrer"
-                >Natural Earth</a
-              >
-              (public domain). Relief has been downsampled and visually
-              exaggerated, and the land colouring is an illustrative palette
-              drawn from elevation, slope and position — not a land-cover survey.
-            </p>
-            <p id="archive-credit"></p>
-            <p>
-              <a href="/data/us-atlas-LICENSE.txt" target="_blank"
-                >Boundary license</a
-              >
-              ·
-              <a href="/data/terrain-attribution.md" target="_blank"
-                >Full terrain attribution</a
-              >
-            </p>
-          </div>
-        </details>
-        <label class="location-picker-label"
-          >Locations
-          <select id="location-picker" aria-label="Select a visible location">
-            <option value="">Select a place</option>
-          </select></label
-        >
-      </footer>
+          <div class="place-page" id="place-page" hidden></div>
+        </main>
+      </div>
     </div>
+    <div class="place-transition" id="place-transition" hidden role="status" aria-live="polite"><span>Arriving in</span><strong id="place-destination"></strong><button type="button" id="cancel-place">Cancel · return to atlas</button></div>
     <script type="module" src="/src/main.js"></script>
   </body>
 </html>

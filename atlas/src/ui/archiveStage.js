@@ -1,41 +1,7 @@
-/** Cross-fading slideshow of period photographs, behind and above the map.
- *
- * The set of plates is swapped whenever the timeline crosses into a new
- * period, so the imagery always belongs to the years on the scrubber. Within a
- * period the plates dwell, cross-fade and drift very slowly.
- *
- * FRAMING. The band is a wide letterbox, so a cover-crop throws away most of
- * any photograph that is not itself wide. Each plate therefore declares the
- * point the crop must keep — `focus` in src/data/archive.js — which becomes
- * its `object-position`. The middle of a photograph is rarely the subject.
- *
- * FOLLOWING THE CAMERA. The band sits in front of the canvas but reads as
- * something hanging far behind the map, and a backdrop that stays nailed to
- * the screen while the scene orbits underneath it breaks that completely. So
- * `setView` turns the band with the camera. The main move is a horizontal
- * one: the band is a plane standing in the scene, so orbiting left or right
- * swings it on its vertical axis (`rotateY`, under the perspective declared
- * on .archive), exactly as the map itself swings. Under that it also pans
- * against the yaw, rises and fades as the camera tilts towards straight-down,
- * and rolls by a fraction of a degree. Every part of it is deliberately a
- * fraction of the camera's own movement, which is what distance looks like.
- *
- * The overscan that keeps all of this from showing an edge is CALCULATED,
- * not guessed. The cost of the swing is not a fixed fraction of the band: the
- * receding edge pulls in by an amount that grows with the band's width and
- * with the perspective, and the roll costs half the band's width times its
- * sine. A constant that is safely generous on a laptop is not enough on a
- * wide monitor, which is exactly the bug this replaced. `measure()` solves
- * the overscan from the band's real size every time it changes.
- *
- * Only `transform` moves, on the stage, while the plate owns its own drift —
- * two elements, so the two never fight and neither leaves the compositor.
- *
- * Movement is ambient, so it is the first thing to go: under
- * prefers-reduced-motion the stage holds the first plate of the period and
- * never advances on its own. It still changes when the reader changes the
- * year, because that is their motion, not ours. The camera lean stays, because
- * it is a response to what the reader is doing rather than motion of our own.
+/** Cross-fading archival photographs with manual and automatic navigation.
+ * The framed gallery uses followCamera: false; the optional camera helpers
+ * below support a scene-mounted treatment. Captions share the active index.
+ * Reduced motion starts paused, and explicit playback remains available.
  */
 
 export const DWELL_MS = 7600;
@@ -128,7 +94,7 @@ export function overscanFor(bandW, bandH, p) {
   return { x: Math.ceil(ox), y: Math.ceil(oy) };
 }
 
-export function createArchiveStage(root, onPlate = () => {}) {
+export function createArchiveStage(root, onPlate = () => {}, { followCamera = true } = {}) {
   const cache = new Map();
   const motion = window.matchMedia("(prefers-reduced-motion: reduce)");
   let plates = [],
@@ -138,14 +104,14 @@ export function createArchiveStage(root, onPlate = () => {}) {
     viewFrame = 0,
     view = null,
     hidden = false,
+    paused = motion.matches,
     disposed = false;
 
   function element(plate) {
     let img = cache.get(plate.src);
     if (!img) {
       img = new Image();
-      // Decorative here: the caption in the period card carries the meaning,
-      // and the plates themselves are blurred and dimmed past reading.
+      // The adjacent figcaption carries the photograph’s description and credit.
       img.alt = "";
       img.className = "archive-plate";
       img.decoding = "async";
@@ -175,7 +141,7 @@ export function createArchiveStage(root, onPlate = () => {}) {
   function schedule() {
     clearInterval(timer);
     timer = null;
-    if (disposed || hidden || motion.matches || plates.length < 2) return;
+    if (disposed || hidden || paused || plates.length < 2) return;
     timer = setInterval(() => show(index + 1), DWELL_MS);
   }
 
@@ -190,6 +156,7 @@ export function createArchiveStage(root, onPlate = () => {}) {
 
   /** Re-solve the overscan whenever the band changes size. */
   function measure() {
+    if (!followCamera) return;
     const band = root.parentElement;
     if (!band) return;
     const r = band.getBoundingClientRect();
@@ -213,7 +180,11 @@ export function createArchiveStage(root, onPlate = () => {}) {
   }
 
   // Turning reduced motion on mid-session stops the auto-advance at once.
-  motion.addEventListener("change", schedule);
+  function motionChanged() {
+    if (motion.matches) paused = true;
+    schedule();
+  }
+  motion.addEventListener("change", motionChanged);
   const resize = new ResizeObserver(measure);
   if (root.parentElement) resize.observe(root.parentElement);
   measure();
@@ -234,11 +205,26 @@ export function createArchiveStage(root, onPlate = () => {}) {
     /** Lean the band to match the camera. Safe to call per frame: the write is
      * coalesced, and the scene already reports once per rendered frame. */
     setView(next) {
+      if (!followCamera) return;
       view = next;
       if (!viewFrame && !disposed)
         viewFrame = requestAnimationFrame(applyView);
     },
-    /** Stop compositing while the tab is in the background. */
+    previous() {
+      if (disposed) return;
+      show(index - 1);
+      schedule();
+    },
+    next() {
+      if (disposed) return;
+      show(index + 1);
+      schedule();
+    },
+    setPaused(value) {
+      paused = Boolean(value);
+      schedule();
+    },
+    /** Stop advancing while the page is hidden or the about drawer is open. */
     setHidden(value) {
       hidden = value;
       schedule();
@@ -251,7 +237,7 @@ export function createArchiveStage(root, onPlate = () => {}) {
       resize.disconnect();
       root.replaceChildren();
       cache.clear();
-      motion.removeEventListener("change", schedule);
+      motion.removeEventListener("change", motionChanged);
     },
   };
 }

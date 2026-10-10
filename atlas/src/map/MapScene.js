@@ -1,7 +1,8 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
-import { getMapState } from "../data/eras.js";
+import { animateFlight } from "./cameraFlight.js";
+import { historicalSnapshot, mapCategories } from "../data/historicalMap.js";
 
 const PROJ_W = 975,
   PROJ_H = 610,
@@ -268,14 +269,6 @@ export class MapScene {
     this.scene.add(this.land);
     this.buildCoast();
     const lines = [];
-    for (const ring of this.data.borders.coordinates)
-      for (let i = 1; i < ring.length; i++)
-        for (const p of [ring[i - 1], ring[i]])
-          lines.push(
-            (p[0] - PROJ_W / 2) / UNIT,
-            LAND_TOP + 0.03,
-            (p[1] - 305) / UNIT,
-          );
     this.border = new THREE.LineSegments(
       new THREE.BufferGeometry().setAttribute(
         "position",
@@ -480,28 +473,7 @@ export class MapScene {
     });
   }
   update(year, visibleIds, selectedId) {
-    const state = getMapState(
-      year,
-      this.data.states.features.map((s) => s.id),
-    );
-    const color = new THREE.Color(),
-      neutral = new THREE.Color("#ffffff"),
-      accent = new THREE.Color(state.era.color);
-    const attr = this.land.geometry.getAttribute("color"),
-      emphasis = this.land.geometry.getAttribute("emphasis");
-    if (this.lastYear !== year) {
-      for (const range of this.ranges) {
-        const active = state.active.has(range.id);
-        color.copy(active ? accent : neutral);
-        for (let i = range.start; i < range.start + range.count; i++) {
-          attr.setXYZ(i, color.r, color.g, color.b);
-          emphasis.setX(i, active ? 0.26 + state.emphasis * 0.38 : 0);
-        }
-      }
-      attr.needsUpdate = true;
-      emphasis.needsUpdate = true;
-      this.lastYear = year;
-    }
+    this.updateHistory(year);
     for (const m of this.markers) {
       const visible = visibleIds.has(m.id);
       m.group.visible = visible;
@@ -513,6 +485,59 @@ export class MapScene {
       m.halo.scale.setScalar(m.id === selectedId ? 1.4 : 1);
     }
     this.invalidate();
+  }
+  updateHistory(year) {
+    const snapshot = historicalSnapshot(this.data.history, this.data, year);
+    this.container.dataset.boundaryYear = String(year);
+    this.container.dataset.boundaryCount = String(snapshot.entries.length);
+    if (snapshot.key === this.boundaryKey) return;
+    this.boundaryKey = snapshot.key;
+    if (this.historyLayer) {
+      this.scene.remove(this.historyLayer);
+      this.historyLayer.traverse(object => {
+        object.geometry?.dispose();
+        object.material?.dispose();
+      });
+    }
+    const layer = this.historyLayer = new THREE.Group();
+    const lines = [];
+    const categories = new Map();
+    for (const feature of snapshot.entries) {
+      const polygons = feature.geometry.type === 'MultiPolygon' ? feature.geometry.coordinates : [feature.geometry.coordinates];
+      if (!categories.has(feature.category)) categories.set(feature.category, []);
+      const parts = categories.get(feature.category);
+      for (const polygon of polygons) {
+        const toPoints = ring => ring.map(([x,y]) => new THREE.Vector2((x - PROJ_W / 2) / UNIT, (305 - y) / UNIT));
+        const shape = new THREE.Shape(toPoints(polygon[0]));
+        for (const hole of polygon.slice(1)) shape.holes.push(new THREE.Path(toPoints(hole)));
+        const geometry = new THREE.ShapeGeometry(shape);
+        geometry.rotateX(-Math.PI / 2);
+        geometry.translate(0, LAND_TOP + 0.018, 0);
+        parts.push(geometry);
+        for (const ring of polygon)
+          for (let i = 1; i < ring.length; i++)
+            for (const [x,y] of [ring[i-1], ring[i]]) lines.push((x - PROJ_W / 2) / UNIT, LAND_TOP + 0.035, (y - 305) / UNIT);
+      }
+    }
+    // One draw call per affiliation instead of one per state.
+    for (const [category, parts] of categories) {
+      if (!parts.length) continue;
+      const geometry = mergeGeometries(parts);
+      parts.forEach(part => part.dispose());
+      const mesh = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial({
+        color: mapCategories[category].color,
+        transparent: true, opacity: 0.5, depthWrite: false,
+      }));
+      mesh.renderOrder = 1;
+      layer.add(mesh);
+    }
+    this.border.geometry.dispose();
+    this.border.geometry = new THREE.BufferGeometry().setAttribute('position', new THREE.Float32BufferAttribute(lines, 3));
+    this.border.material.opacity = 0.65;
+    this.border.renderOrder = 2;
+    this.scene.add(layer);
+    this.container.dataset.boundaryYear = String(year);
+    this.container.dataset.boundaryCount = String(snapshot.entries.length);
   }
   setRelief(show) {
     this.topMaterial.normalScale.setScalar(show ? 1.15 : 0);
@@ -550,8 +575,69 @@ export class MapScene {
       29 / (Math.tan((19 * Math.PI) / 180) * this.camera.aspect),
     );
   }
+  captureView() {
+    return { position: this.camera.position.clone(), target: this.controls.target.clone() };
+  }
+  restoreView(view) {
+    this.cancelFlight();
+    if (!view) return;
+    this.camera.position.copy(view.position);
+    this.controls.target.copy(view.target);
+    this.controls.update();
+    this.invalidate();
+  }
+  cancelFlight() {
+    this.flight?.abort();
+    this.restoreFlightLimits?.();
+    this.restoreFlightLimits = null;
+    this.flight = null;
+  }
+  async flyToLocation(id, { duration = 1500, signal } = {}) {
+    const marker = this.markers.find((entry) => entry.id === id);
+    if (!marker || this.disposed || signal?.aborted) return false;
+    this.cancelFlight();
+    const flight = this.flight = new AbortController();
+    const abort = () => flight.abort();
+    signal?.addEventListener("abort", abort, { once: true });
+    const start = this.captureView();
+    const target = marker.group.position.clone();
+    target.y = LAND_TOP;
+    const position = target.clone().add(new THREE.Vector3(0, 7.5, 4.2));
+    const limits = { enabled: this.controls.enabled, minDistance: this.controls.minDistance, maxTargetRadius: this.controls.maxTargetRadius };
+    const restoreLimits = () => Object.assign(this.controls, limits);
+    this.restoreFlightLimits = restoreLimits;
+    this.controls.enabled = false;
+    this.controls.minDistance = 2;
+    this.controls.maxTargetRadius = Infinity;
+    try {
+      return await animateFlight({ duration, signal: flight.signal, update: (progress) => {
+        this.camera.position.lerpVectors(start.position, position, progress);
+        this.controls.target.lerpVectors(start.target, target, progress);
+        this.controls.update();
+        this.invalidate("city-flight");
+      } });
+    } finally {
+      signal?.removeEventListener("abort", abort);
+      if (this.flight === flight) {
+        restoreLimits();
+        this.restoreFlightLimits = null;
+        this.flight = null;
+      }
+    }
+  }
+  setPaused(paused) {
+    this.paused = paused;
+    if (paused) {
+      cancelAnimationFrame(this.frame);
+      this.frame = 0;
+    } else this.invalidate();
+  }
   reset() {
-    const distance = this.framingDistance();
+    /* A little further out than the distance that merely fits the land, so
+     * the full-bleed stage keeps air around the subject for the margins to
+     * live in. Still inside maxDistance, which stays at 1.22x framing, so
+     * the sea sheet continues to cover the frame. */
+    const distance = this.framingDistance() * 1.14;
     this.controls.target.set(0, 0, 0);
     this.camera.position.set(0, distance * 0.83, distance * 0.56);
     this.controls.update();
@@ -588,7 +674,7 @@ export class MapScene {
     // Allow a little pull-back past the framing distance, never enough to clear
     // the sea sheet. Tall windows frame from further out, so this follows them.
     this.controls.maxDistance = Math.min(118, this.framingDistance() * 1.22);
-    if (crossed) this.reset();
+    if (crossed && !this.flight && !this.paused) this.reset();
     this.invalidate("resize");
   }
   invalidate(reason = "other") {
@@ -597,7 +683,7 @@ export class MapScene {
       this.reasons[reason] = (this.reasons[reason] ?? 0) + 1;
       this.renderer.domElement.dataset.requests = JSON.stringify(this.reasons);
     }
-    if (!this.frame && !this.disposed && !document.hidden)
+    if (!this.frame && !this.disposed && !this.paused && !document.hidden)
       this.frame = requestAnimationFrame(() => {
         this.frame = 0;
         this.render();
@@ -651,6 +737,7 @@ export class MapScene {
   }
   dispose() {
     this.disposed = true;
+    this.cancelFlight();
     cancelAnimationFrame(this.frame);
     this.resizeObserver.disconnect();
     this.controls.dispose();

@@ -35,5 +35,5 @@ export function createTimeline(initial = MIN_YEAR) {
   };
 }
 export function visibleLocations(locations, year) {
-  return locations.filter((l) => year >= l.from && year <= l.to);
+  return locations.filter((location) => location.periods.some(period => year >= period.from && year <= period.to));
 }
