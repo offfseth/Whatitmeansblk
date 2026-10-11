@@ -1,5 +1,34 @@
 # Validation
 
+## Map surroundings — October 10, 2026
+
+- Replaced the runtime sea.webp backdrop (neighboring-country silhouettes and lit water) with a static 128px alpha texture and an unlit matte material. The radial field fades to zero alpha at its edges and is disposed with the other map textures.
+- Removed the three large ocean labels; retained Alaska and Hawaiʻi inset labels, terrain, rivers, lakes, and historical boundaries.
+- Inspected the desktop default view in Chrome. All 44 tests pass and the production build passes. Camera-extreme and physical mobile GPU checks were not completed in this pass.
+
+## City typography and palette audit — October 10, 2026
+
+- Replaced the accumulated city-page overrides with one responsive stylesheet. Headings use normal tracking and explicit line heights; dates are block-level; phone metadata flows in a single column. Hero captions occupy normal layout space rather than overlapping the introduction.
+- Warm-white reading and source sections, deep teal dates and navigation, mint and terracotta accents. Original photographs remain unchanged.
+- Browser DOM geometry audit: all 13 published story chapters at 390, 768, and 1440 pixel viewport widths (39 combinations), with no horizontal document overflow, overflowing checked text elements, or intersections between checked heading, paragraph, caption, date, and metadata blocks.
+- Visually inspected Washington's desktop reading section and 320px phone reading, dates, and archive. The 320px check also has no horizontal document overflow. Geometry checks do not replace visual checks or physical-device testing.
+- All 44 automated tests pass. Production build passes with the existing bundle-size advisory.
+
+## City page visual refresh — October 10, 2026
+
+- Dark continuous backgrounds, large photographic heroes, full-width uncropped archive images, and a sticky translucent masthead with an explicit Back to map button.
+- Existing photo assets are 1,400 pixels wide for the city stories. Gallery width is capped at 1,400 CSS pixels; no new resolution or detail was generated.
+- Chrome: inspected Washington on desktop and a 390 × 844 viewport; phone document width matches its client width. Checked the archive jump and Back to map restoring the 1963 atlas. Chicago's no-photo story renders its geographic context and archive-empty state.
+- 44 tests pass; production build passes with the existing bundle-size advisory.
+
+## Story discovery — October 10, 2026
+
+- 44 automated tests pass, including navigation through single-year stories, returning cities, shared start years, and coverage endpoints.
+- Production build passes with the existing bundle-size advisory.
+- Previous/next controls jump between published story start years. The expandable city-story list changes the map year before readers select a place to open its article.
+- Dates represent editorial story coverage, not city founding or disappearance. No new historical claims or boundary datasets were added in this pass.
+- Browser visual and interaction checks have not been performed for these new controls.
+
 > **Stale in one respect.** This run predates the period slideshow and the
 > period card. Where it says "memorial drift", the build now cross-fades
 > period-filtered plates in front of the canvas instead. The layer is still

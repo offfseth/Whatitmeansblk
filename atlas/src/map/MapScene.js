@@ -26,9 +26,8 @@ const COAST_PROFILE = [
 ];
 
 /** Owns WebGL only. Data, dates and event content stay outside this class.
- * The canvas is transparent, but the sea sheet it draws is not: anything put
- * behind the canvas in the DOM is hidden by the water, which is why the
- * period slideshow in src/ui/archiveStage.js paints in front of it instead. */
+ * The quiet basin fades to transparent, allowing the page's photographic
+ * atmosphere to show through without a second map behind the terrain. */
 export class MapScene {
   constructor(container, data, locations, onSelect, onError, onCamera) {
     this.container = container;
@@ -159,24 +158,42 @@ export class MapScene {
     return texture;
   }
   buildSea() {
-    const water = this.load("/data/sea.webp", { srgb: true });
+    // A small, static alpha field replaces the baked neighboring-country
+    // silhouettes and reflective water. Zero alpha around every edge means
+    // the plane cannot read as a rectangular board at camera extremes.
+    const size = 128;
+    const pixels = new Uint8Array(size * size * 4);
+    for (let y = 0; y < size; y++) {
+      for (let x = 0; x < size; x++) {
+        const radius = Math.hypot((x / (size - 1) - .5) * 2, (y / (size - 1) - .5) * 2);
+        const t = Math.max(0, 1 - radius);
+        const alpha = t * t * (3 - 2 * t);
+        const offset = (y * size + x) * 4;
+        pixels.set([24, 43, 40, Math.round(alpha * 205)], offset);
+      }
+    }
+    const water = new THREE.DataTexture(pixels, size, size);
+    water.colorSpace = THREE.SRGBColorSpace;
+    water.magFilter = THREE.LinearFilter;
+    water.minFilter = THREE.LinearFilter;
+    water.needsUpdate = true;
+    this.textures.push(water);
     const sea = new THREE.Mesh(
       new THREE.PlaneGeometry(
         (PROJ_W / UNIT) * SEA_SPAN,
         (PROJ_H / UNIT) * SEA_SPAN,
       ),
-      // Same lighting model as the land, so the two surfaces stay in the same
-      // exposure. Low roughness is what makes the water read as water: it keeps
-      // a soft sheen where the land goes matte.
-      new THREE.MeshStandardMaterial({
+      // Unlit: the surroundings do not acquire a moving specular hotspot.
+      new THREE.MeshBasicMaterial({
         map: water,
         transparent: true,
-        roughness: 0.34,
-        metalness: 0,
+        depthWrite: false,
+        toneMapped: false,
       }),
     );
     sea.rotation.x = -Math.PI / 2;
     sea.position.y = SEA_Y;
+    sea.renderOrder = -1;
     this.scene.add(sea);
   }
   buildLand() {
@@ -459,9 +476,6 @@ export class MapScene {
   }
   addMapLabels() {
     this.mapLabels = [
-      ["PACIFIC OCEAN", -24, 4],
-      ["ATLANTIC OCEAN", 23, 4],
-      ["GULF OF MEXICO", 7, 14.5],
       ["ALASKA · INSET", -18, 15],
       ["HAWAIʻI · INSET", -8, 15],
     ].map(([name, x, z]) => {

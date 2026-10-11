@@ -16,6 +16,7 @@ import {
 import { createArchiveStage } from "./ui/archiveStage.js";
 import { createDrawer } from "./ui/drawer.js";
 import { createSky } from "./ui/sky.js";
+import { createStoryNavigator } from "./ui/storyNavigator.js";
 
 const icons = {
   compass: '<circle cx="12" cy="12" r="9"/><path d="m15 9-2 4-4 2 2-4z"/>',
@@ -40,6 +41,10 @@ const $ = (id) => document.getElementById(id),
 let mapData = null;
 let scene = null,
   playback = null;
+const storyNavigator = createStoryNavigator(document.querySelector('.history-places'), locations, year => {
+  stopPlayback();
+  timeline.setYear(year);
+});
 $("year-slider").max = MAX_YEAR;
 $("year-input").max = MAX_YEAR;
 $("date-range").textContent = "1619–" + MAX_YEAR;
@@ -191,6 +196,7 @@ function render({ year, selectedId }) {
   scene?.update(year, new Set(visible.map((l) => l.id)), selectedId);
 }
 function renderHistory(year, visible) {
+  storyNavigator.update(year);
   const description = boundaryDescription(year);
   $("boundary-date").textContent = description.date;
   $("boundary-title").textContent = description.title;
