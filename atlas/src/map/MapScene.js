@@ -3,6 +3,7 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
 import { animateFlight } from "./cameraFlight.js";
 import { historicalSnapshot, mapCategories } from "../data/historicalMap.js";
+import { mapPlacePoints } from '../data/mapPlacePoints.js';
 
 const PROJ_W = 975,
   PROJ_H = 610,
@@ -441,7 +442,7 @@ export class MapScene {
     const geometry = new THREE.SphereGeometry(0.22, 12, 8),
       haloGeometry = new THREE.RingGeometry(0.32, 0.4, 24);
     for (const location of this.locations) {
-      const point = this.data.locations.find(
+      const point = mapPlacePoints[location.id] ?? this.data.locations.find(
         (l) => l.id === location.id,
       )?.point;
       if (!point) continue;
@@ -471,7 +472,7 @@ export class MapScene {
       button.setAttribute("aria-label", "Select " + location.name);
       button.onclick = () => this.onSelect(location.id);
       this.container.append(button);
-      this.markers.push({ id: location.id, group, mesh, halo, button });
+      this.markers.push({ id: location.id, name: location.name, group, mesh, halo, button });
     }
   }
   addMapLabels() {
@@ -486,7 +487,7 @@ export class MapScene {
       return { el, position: new THREE.Vector3(x, SEA_Y, z) };
     });
   }
-  update(year, visibleIds, selectedId) {
+  update(year, visibleIds, selectedId, coverage = new Map()) {
     this.updateHistory(year);
     for (const m of this.markers) {
       const visible = visibleIds.has(m.id);
@@ -495,6 +496,11 @@ export class MapScene {
       m.button.hidden = !visible;
       m.button.classList.toggle("selected", m.id === selectedId);
       m.button.setAttribute("aria-pressed", String(m.id === selectedId));
+      const place = coverage.get(m.id);
+      if (place) {
+        m.button.textContent = m.name + (place.entries.length ? ' · ' + place.entries.length : '');
+        m.button.setAttribute('aria-label', `Select ${m.name}, ${place.entries.length} ${place.entries.length === 1 ? 'milestone' : 'milestones'}, ${place.stories.length} city ${place.stories.length === 1 ? 'story' : 'stories'}`);
+      }
       m.mesh.material.color.set(m.id === selectedId ? "#fbead0" : "#e2642a");
       m.halo.scale.setScalar(m.id === selectedId ? 1.4 : 1);
     }

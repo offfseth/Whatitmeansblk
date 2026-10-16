@@ -1,12 +1,15 @@
 import "./style.css";
 import "./ui/placePage.css";
+import "./ui/mapMilestones.css";
+import { createMapMilestones } from './ui/mapMilestones.js';
+import { mapCoverage, adjacentCoverageYear, readMapSearch } from './state/mapCoverage.js';
+import { mapPlaces } from './data/mapPlaces.js';
 import { createPlaceExplorer } from "./ui/placeExplorer.js";
 import { boundaryDescription, historicalSnapshot, mapCategories, isCivilWarSnapshot } from "./data/historicalMap.js";
-import { nearestStoryYear, getPlaceStory } from "./data/placeStories.js";
 import { MapScene } from "./map/MapScene.js";
 import { locations } from "./data/locations.js";
 import { eras, getEra, MIN_YEAR, MAX_YEAR } from "./data/eras.js";
-import { createTimeline, visibleLocations } from "./state/timeline.js";
+import { createTimeline } from "./state/timeline.js";
 import {
   platesForYear,
   archiveIsPlaceholder,
@@ -17,6 +20,9 @@ import { createArchiveStage } from "./ui/archiveStage.js";
 import { createDrawer } from "./ui/drawer.js";
 import { createSky } from "./ui/sky.js";
 import { createStoryNavigator } from "./ui/storyNavigator.js";
+import { milestones } from "./data/milestones.js";
+import { sources } from "./data/sources.js";
+import { filterMilestones } from "./state/milestoneFilters.js";
 
 const icons = {
   compass: '<circle cx="12" cy="12" r="9"/><path d="m15 9-2 4-4 2 2-4z"/>',
@@ -37,14 +43,32 @@ document
   .querySelectorAll("[data-icon]")
   .forEach((el) => (el.innerHTML = icon(el.dataset.icon)));
 const $ = (id) => document.getElementById(id),
-  timeline = createTimeline(1963);
+  timeline = createTimeline(new URLSearchParams(location.search).get('year') ?? 1963);
 let mapData = null;
 let scene = null,
   playback = null;
+let mapScope = readMapSearch(location.search).scope;
+timeline.select(readMapSearch(location.search).place || null);
+const mapPanel = createMapMilestones($('map-place-panel'), {
+  onClose: closeMapPlace,
+  onStory: (id, year) => placeExplorer.open(id, { year }),
+  onYear: year => { stopPlayback(); mapScope = 'year'; timeline.setYear(year); render(timeline.get()); mapPanel.focus(); },
+});
+function closeMapPlace() {
+  timeline.select(null);
+  $('location-picker').focus({ preventScroll: true });
+}
+function selectMapPlace(id) {
+  stopPlayback();
+  timeline.select(id || null);
+  if (!id) return;
+  if (window.matchMedia('(max-width: 960px)').matches) $('map-place-panel').scrollIntoView({ block: 'start', behavior: 'instant' });
+  mapPanel.focus();
+}
 const storyNavigator = createStoryNavigator(document.querySelector('.history-places'), locations, year => {
   stopPlayback();
   timeline.setYear(year);
-});
+}, { includeSteps: false });
 $("year-slider").max = MAX_YEAR;
 $("year-input").max = MAX_YEAR;
 $("date-range").textContent = "1619–" + MAX_YEAR;
@@ -131,7 +155,7 @@ $("archive-credit").textContent = [
     ? "Archival photographs are still being gathered. Chapters without images display an empty archive panel."
     : "Archive imagery: " + archiveCredits().join("; ") + ".",
   unclearedPlates.length &&
-    "Some plates are shown here for prototype review and their rights have not been cleared for publication.",
+    "Unverified photographs are withheld from display and production assets.",
 ]
   .filter(Boolean)
   .join(" ");
@@ -150,8 +174,9 @@ function stopPlayback() {
   $("play").setAttribute("aria-label", "Play timeline");
 }
 function render({ year, selectedId }) {
-  const visible = visibleLocations(locations, year);
-  if (selectedId && !visible.some((l) => l.id === selectedId)) {
+  const coverage = mapCoverage(year, mapScope);
+  const visible = coverage.places;
+  if (selectedId && !(selectedId === '@broad' && coverage.broad.length) && !visible.some((l) => l.id === selectedId)) {
     timeline.select(null);
     return;
   }
@@ -164,7 +189,7 @@ function render({ year, selectedId }) {
   );
   $("year-slider").setAttribute(
     "aria-valuetext",
-    year + ", " + era.period + ", " + visible.length + " places with stories",
+    year + ", " + era.period + ", " + visible.length + " places in the " + (mapScope === 'year' ? 'selected year' : 'historical period'),
   );
   if (document.activeElement !== $("year-input"))
     $("year-input").value = String(year);
@@ -176,9 +201,20 @@ function render({ year, selectedId }) {
   $("era-span").textContent = era.span;
   $("era-period").textContent = era.period;
   $("era-meaning").textContent = era.meaning;
-  $("layer-name").textContent = "Stories in their time";
+  const references = $("era-sources");
+  references.replaceChildren('Sources: ', ...era.sourceIds.map((id, index) => {
+    const link = document.createElement('a');
+    link.href = sources[id].url; link.target = '_blank'; link.rel = 'noopener noreferrer';
+    link.textContent = `[${index + 1}]`; link.title = sources[id].publisher + ' — ' + sources[id].title;
+    link.setAttribute('aria-label', 'Chapter source ' + (index + 1) + ': ' + link.title);
+    return link;
+  }));
+  const chapterMilestones = filterMilestones(milestones, { era: era.year });
+  $("chapter-milestones").href = './milestones.html?era=' + era.year;
+  $("chapter-milestones").textContent = `Explore ${chapterMilestones.length} milestones ↗`;
+  $("layer-name").textContent = mapScope === 'year' ? 'Milestones in this year' : 'Milestones in this period';
   $("timeline-note").textContent = year < 1783 ? "Historical borders begin in 1783" : year > 2000 ? "Modern Census reference" : "Boundaries as of December 31";
-  renderHistory(year, visible);
+  renderHistory(year, coverage);
   archiveStage.setPlates(platesForYear(year));
   document.documentElement.style.setProperty("--era-color", era.color);
   document.querySelectorAll("#era-buttons [data-year]").forEach((button) => {
@@ -188,29 +224,46 @@ function render({ year, selectedId }) {
   });
   const picker = $("location-picker");
   picker.replaceChildren(
-    new Option(visible.length ? "Select a place" : "No stories for this year", ""),
-    ...visible.map((l) => new Option(l.name + " · " + getPlaceStory(l.id, year).label, l.id)),
+    new Option(visible.length ? "Select a place" : "No mapped places in this window", ""),
+    ...visible.map((place) => new Option(`${place.name} · ${place.entries.length} ${place.entries.length === 1 ? 'milestone' : 'milestones'}${place.stories.length ? ' + city stories' : ''}`, place.id)),
   );
-  picker.value = selectedId ?? "";
+  picker.value = visible.some(place => place.id === selectedId) ? selectedId : '';
   picker.disabled = visible.length === 0;
-  scene?.update(year, new Set(visible.map((l) => l.id)), selectedId);
+  mapPanel.render(coverage, selectedId, mapScope);
+  scene?.update(year, new Set(visible.map((l) => l.id)), selectedId, new Map(visible.map(place => [place.id, place])));
+  if (!playback && !location.hash.startsWith('#/place/')) {
+    const params = new URLSearchParams(location.search);
+    params.set('year', year); params.set('scope', mapScope);
+    if (selectedId) params.set('place', selectedId); else params.delete('place');
+    history.replaceState(null, '', location.pathname + '?' + params + location.hash);
+  }
 }
-function renderHistory(year, visible) {
+function renderHistory(year, coverage) {
   storyNavigator.update(year);
+  const visible = coverage.places;
   const description = boundaryDescription(year);
   $("boundary-date").textContent = description.date;
   $("boundary-title").textContent = description.title;
   $("boundary-note").textContent = description.note;
-  $("place-coverage").textContent = visible.length
-    ? visible.length + (visible.length === 1 ? " place" : " places") + " with stories in " + year
-    : "No published city stories for " + year + " yet.";
+  $('map-scope-note').textContent = `Pins: ${coverage.window.label}. Boundaries: ${year}.`;
+  document.querySelectorAll('[data-map-scope]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.mapScope === mapScope)));
+  $("place-coverage").textContent = `${visible.length} mapped places · ${coverage.events.length} milestones in ${coverage.window.label}`;
+  const broad = $('broad-milestones');
+  broad.hidden = !coverage.broad.length;
+  broad.textContent = `Across regions & the nation · ${coverage.broad.length} milestones ↗`;
   const next = $("coverage-next");
-  next.hidden = visible.length > 0;
-  if (!visible.length) {
-    const nearest = locations.map(l => nearestStoryYear(l.id, year))
-      .sort((a,b) => Math.abs(a-year) - Math.abs(b-year) || a-b)[0];
+  next.hidden = visible.length > 0 || coverage.broad.length > 0;
+  if (!visible.length && !coverage.broad.length) {
+    const nearest = adjacentCoverageYear(year, -1) ?? adjacentCoverageYear(year, 1);
     next.dataset.year = nearest;
     next.textContent = "Explore a covered year · " + nearest + " ↗";
+  }
+  for (const [id, direction] of [['previous-milestone', -1], ['next-milestone', 1]]) {
+    const button = $(id), nextYear = adjacentCoverageYear(year, direction);
+    button.disabled = nextYear === null;
+    button.dataset.year = nextYear ?? '';
+    button.textContent = `${direction < 0 ? '← Earlier' : 'Later →'}${nextYear === null ? '' : ' · ' + nextYear}`;
+    button.setAttribute('aria-label', `${direction < 0 ? 'Previous' : 'Next'} milestone or city story year${nextYear === null ? '' : ', ' + nextYear}`);
   }
   document.querySelectorAll("[data-map-year]").forEach(button => {
     if (button.textContent === "Today") button.dataset.mapYear = MAX_YEAR;
@@ -247,7 +300,7 @@ $("year-form").addEventListener("submit", (e) => {
   stopPlayback();
   timeline.setYear($("year-input").value);
 });
-document.querySelectorAll("[data-year]").forEach((b) =>
+document.querySelectorAll("#era-buttons [data-year]").forEach((b) =>
   b.addEventListener("click", () => {
     stopPlayback();
     timeline.setYear(b.dataset.year);
@@ -257,6 +310,13 @@ document.querySelectorAll("[data-map-year]").forEach(button => {
   button.onclick = () => { stopPlayback(); timeline.setYear(button.dataset.mapYear); };
 });
 $("coverage-next").onclick = () => { stopPlayback(); timeline.setYear($("coverage-next").dataset.year); };
+document.querySelectorAll('[data-map-scope]').forEach(button => {
+  button.onclick = () => { stopPlayback(); mapScope = button.dataset.mapScope; render(timeline.get()); };
+});
+$('broad-milestones').onclick = () => selectMapPlace('@broad');
+for (const id of ['previous-milestone', 'next-milestone']) $(id).onclick = () => {
+  stopPlayback(); timeline.setYear($(id).dataset.year);
+};
 $("play").onclick = () => {
   if (playback) {
     stopPlayback();
@@ -311,7 +371,7 @@ const placeExplorer = createPlaceExplorer({
   closeDrawer: () => drawerUI.close(),
 });
 $("location-picker").onchange = (e) => {
-  if (e.target.value) placeExplorer.open(e.target.value);
+  selectMapPlace(e.target.value);
 };
 $("zoom-in").onclick = () => scene?.zoom(0.8);
 $("zoom-out").onclick = () => scene?.zoom(1.25);
@@ -321,7 +381,7 @@ $("relief").onchange = (e) => scene?.setRelief(e.target.checked);
 $("borders").onchange = (e) => scene?.setBorders(e.target.checked);
 document.addEventListener("keydown", (e) => {
   if (e.key !== "Escape") return;
-  if (!placeExplorer.active) timeline.select(null);
+  if (!placeExplorer.active && timeline.get().selectedId) closeMapPlace();
 });
 document.addEventListener("visibilitychange", () => {
   if (document.hidden) stopPlayback();
@@ -343,8 +403,8 @@ try {
   scene = new MapScene(
     $("map"),
     data,
-    locations,
-    (id) => placeExplorer.open(id),
+    mapPlaces,
+    selectMapPlace,
     showError,
     (camera) => sky.setView(camera),
   );
@@ -413,6 +473,7 @@ if (import.meta.hot)
     drawerUI.dispose();
     archiveStage.dispose();
     sky.dispose();
+    mapPanel.dispose();
     exploring.abort();
     scene?.dispose();
   });

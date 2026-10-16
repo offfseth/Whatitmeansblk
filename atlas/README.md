@@ -31,6 +31,20 @@ npm test
 
 No API keys, accounts, backend, or live map-tile service are needed. The map assets are included. After dependencies are installed, normal build/runtime operations do not require internet access. Asset regeneration is optional and does require network access.
 
+## Sourced milestone collection
+
+Open **Milestones** in the masthead, or visit `/milestones.html`. The collection contains **53 original summaries**, spanning **1619–2022**, with **59 bibliographic references**. Search by person, place, year, subject, or source institution; filter by period and theme; switch chronological order; and follow a permanent link to any event. References identify the publisher, title, material type, direct link, and access date. Map-year links return to the requested year, and city pages link to geographically related milestones.
+
+The HISTORY article supplied in the project brief was used for topic discovery. The summaries were independently written using the linked archival and institutional evidence. This is a selected starting collection, not a complete chronology. It adds no third-party images or direct quotations. Seven chapter introductions now carry their own references as well.
+
+Contribution instructions: [CONTENT_POLICY.md](CONTENT_POLICY.md). Reader-facing policy: [public/data/content-policy.md](public/data/content-policy.md). Data: `src/data/milestones.js` and `src/data/sources.js`; search logic: `src/state/milestoneFilters.js`; page: `milestones.html` and `src/milestonesPage.js`. Vite builds both HTML entry points. `npm run check:content` checks metadata and media registration; it also runs before every production build.
+
+## Interactive milestone map
+
+The map defaults to the selected historical period, with an Exact year toggle. Pins show milestone counts; select one to see the local role, dates, linked sources, and any longer city stories. The map also offers earlier/later coverage jumps and a separate view for national and regional entries. The URL preserves the year, scope, and selected place, for example `/?year=1960&scope=year&place=greensboro`. Milestone-library links return directly to the relevant place and time.
+
+See [mapping method and geographic attribution](public/data/milestone-map-method.md). New map points are generated offline with `npm run prepare:markers`; no terrain rebuild or live geocoding is required.
+
 ## What is implemented
 
 - Orbit, tilt, pan, zoom, reset, and overhead view. Every limit is set so the sea sheet still fills the frame at the extremes, so there is no angle or zoom from which the empty space past it comes into view. The pull-back limit tracks the window's aspect ratio.
@@ -38,7 +52,7 @@ No API keys, accounts, backend, or live map-tile service are needed. The map ass
 - Land that descends into the water on a shelf rather than ending in a cut-out wall, historically dated jurisdiction outlines, and colour/normal/surface textures baked from real elevation samples.
 - A paper-colored about drawer that previews on hover and pins on click. The rest of the page dims and becomes inert while it is open. Escape, the close button, and the backdrop dismiss it; keyboard focus stays inside and returns on close.
 - Native accessible year scrubber, validated year form, seven period jumps, and optional playback.
-- Eight places with 13 dated story chapters that appear, disappear, and change content with the selected year. Selecting a map marker, label, or map location selector flies the camera toward that place, then opens a full editorial page with historical context, key dates, archival imagery, and sources.
+- Twenty-five map locations connect 35 milestones to sourced places and dates, alongside 13 city story chapters across eight cities. Historical-period coverage is the default; exact-year mode narrows the pins. Selecting a pin or location opens its milestone panel, with local context, evidence, and links to available longer city stories. Eighteen national or regional milestones remain available without city pins.
 - Shareable city URLs (`#/place/washington?year=1963`), browser Back/Forward, related places, and return to the original map year, camera, scroll position, and keyboard focus. Escape or the cancel control interrupts a descent. Reduced motion opens the story immediately, and city pages remain available without WebGL.
 - Responsive desktop/phone layout, keyboard-accessible controls, loading/error states, WebGL failure messaging, and reduced idle GPU work.
 - A readable archival slideshow with caption, credit, source, image count, and previous/next/pause controls. Named chapter filters sit between the editorial introduction and the map, sharing the same state as the year scrubber.
@@ -56,7 +70,7 @@ No API keys, accounts, backend, or live map-tile service are needed. The map ass
 
 **The coast.** The land sits only just proud of the water, and the shoreline carries a shelf that steps outward and down from the coast, through a foreshore and the waterline, to a shelf break below the sea. The shelf samples the terrain texture at the shoreline itself, so every coast keeps its own colour as it goes under. A tall plate reads as a cut-out pasted onto a sea however its edge is shaded, so the height difference itself is kept small and relief carries the dimension instead. Islands and lakes narrower than a full shelf get a proportionally narrower one, because otherwise the slope folds back through itself. The shelf is built from the dissolved outline of the landmass (`outline` in `map.json`), so state borders inland are untouched.
 
-**The room.** The page is one viewport-filling stage rather than a stack of bands, because the map is the subject and a stack of bands turns it into an illustration inside an article about itself. The land fills the window; the chapter photograph is the air above it; the masthead, the seven chapter names, the record, the chapter text and the years are held against the four margins as text on a scrim, with no panels, borders or section headings between them. The map toolbar stays compact; selecting a place now leaves the map stage for its full reading page.
+**The room.** The page is one viewport-filling stage rather than a stack of bands, because the map is the subject and a stack of bands turns it into an illustration inside an article about itself. The land fills the window; the chapter photograph is the air above it; the masthead, the seven chapter names, the record, the chapter text and the years are held against the four margins as text on a scrim, with no panels, borders or section headings between them. The map toolbar stays compact; selecting a place opens a reading panel alongside the map, with links to full city stories.
 
 The camera frames the land a little further out than the distance that merely fits it, so the margins have air to sit in rather than overlapping the subject.
 
@@ -76,9 +90,9 @@ Mood is not evidence, so the two are never separated. `src/ui/sky.js` is fed fro
 
 **The drawer.** src/ui/drawer.js coordinates hover preview, click/keyboard pinning, the page scrim, inert content, focus containment, and dismissal. Native disclosure sections contain the project introduction, map instructions, author, sources, and feedback. The author biography and feedback destination still require the creator’s supplied details; the UI does not pretend to send feedback.
 
-**What is loaded.** The Civil Rights Movement period (1954–1967) runs six real photographs in chronological order — Little Rock 1957, the March on Washington 1963, King in 1964, the Civil Rights Act signing, Selma 1965. Five are public domain on a stated basis recorded in each plate's `basis` field: works of the U.S. Army, the U.S. Information Agency and the White House Press Office are works of the federal government, and the two Library of Congress items carry the Library's own "no known restrictions on publication". The sixth, the supplied March on Washington plate, has **uncleared rights** and is marked as such. Every other period currently shows the explicit empty archive panel; the old generated stand-ins remain in the data files but are not shown.
+**What is loaded.** The Civil Rights Movement period runs five photographs with documented item-specific reuse bases: three federal-government works and two Library of Congress items carrying no-known-restrictions advisories. Those advisories are not blanket public-domain guarantees. The supplied photograph with unidentified authorship and unverified rights is now withheld from display and production assets; its original is retained in ignored `private/uncleared/` for identification. No source photographs or quotations were imported for the new milestone collection.
 
-> **Nothing here is quietly presented as a record.** A memorial must not invent its own evidence, so no synthesised photograph of a real person, place or event is used. `rights: "cleared"` requires a one-line `basis` saying *why* it is free and a `source` URL that can be rechecked — both enforced by `npm test`. The footer's "Map notes & credits" panel names every real photograph and says out loud which plates are stand-ins and which have uncleared rights, and in the period card the warning leads the credit line so it is never the part that gets clipped.
+> **Evidence and rights travel with the material.** The published archive requires a source URL, credit, and stated reuse basis. The build rejects unregistered files in `public/archive/`, so hiding an uncleared image is not enough. See [the sourcing and reuse policy](CONTENT_POLICY.md). Automated checks do not certify historical accuracy or legal clearance.
 
 **Historical limits:** The Newberry boundary layer covers 1783–2000, sampled on December 31. Earlier years omit jurisdiction lines and fills; later years use the modern Census reference. Civil War affiliations describe states, not military occupation or a free/slave classification. Indigenous sovereignty and historical coastlines are not represented by this jurisdiction layer. City coverage means published story coverage, not the lifetime of a city. See [historical map method](public/data/history-attribution.md).
 
@@ -195,11 +209,11 @@ To regenerate from the official Newberry ZIP:
 
 See [attribution and source download](public/data/history-attribution.md). The prepared file is included; normal development and builds remain offline.
 
-If city IDs or coordinates change, regenerate map markers with npm run prepare:map and geographic page illustrations with npm run prepare:places. Changing the map projection requires rebuilding both modern and historical geometry and marker positions together. The optional prepare:fonts and prepare:memorial commands remain available.
+Milestone place connections live in src/data/milestoneGeography.js; geographic points live in src/data/mapPlaces.js. Run npm run prepare:markers after changing marker coordinates. Regenerate legacy city page illustrations with npm run prepare:places when their coordinates change. Changing the map projection requires rebuilding both modern and historical geometry and marker positions together. The optional prepare:fonts and prepare:memorial commands remain available.
 
 ## Add period photographs
 
-See the instructions at the top of `src/data/archive.js`. In short: drop the file into `public/archive/`, add an entry with `eraYear` set to the `year` of a period in `src/data/eras.js`, and fill in `caption`, `credit`, `source` and `rights` honestly. `rights: "cleared"` is a claim that someone actually checked the licence; anything else keeps the warning visible in the footer. A cleared plate also needs a one-line `basis` saying why it is free; `npm test` fails without it. Keep roughly four to eight plates per period, ordered by year — the set for one period is cycled, so more plates means a longer loop and more memory held at once.
+Follow [CONTENT_POLICY.md](CONTENT_POLICY.md) and the instructions at the top of `src/data/archive.js`. Check the specific item's reuse evidence before putting it in `public/archive/`. Add a manifest entry with `eraYear` set to the `year` of a period in `src/data/eras.js`, plus its caption, creator credit, original item URL, and documented rights basis. Only reviewed assets may have `rights: "cleared"`; unverified files must stay outside `public/`. The build rejects missing evidence and unregistered archive files. Keep roughly four to eight plates per period, ordered by year — the set for one period is cycled, so more plates means a longer loop and more memory held at once.
 
 Good public-domain sources for the empty periods: the Library of Congress Prints & Photographs catalogue, the National Archives catalogue, Smithsonian Open Access and the NYPL public-domain collections. Works of the U.S. federal government (FSA/OWI, WPA, NARA) are generally public domain; mid-century press photographs usually are not.
 

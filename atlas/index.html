@@ -53,7 +53,7 @@
 
             <header class="masthead">
               <a class="brand" href="./" aria-label="Black Atlas home">Black Atlas<span class="brand-dot">.</span></a>
-              <span class="masthead-caption">African American history, in place</span>
+              <a class="masthead-caption library-link" href="./milestones.html">Milestones ↗</a>
               <nav class="chapter-rail" id="chapter-filters" aria-label="Choose a chapter">
                 <div class="era-buttons" id="era-buttons" role="group" aria-label="Filter by historical period"></div>
               </nav>
@@ -83,7 +83,8 @@
               <span class="era-span" id="era-span"></span>
               <h2 id="era-period"></h2>
               <p class="era-meaning" id="era-meaning"></p>
-              <a class="chapter-more" href="#notes">Notes &amp; credits <span aria-hidden="true">↓</span></a>
+              <p class="era-sources" id="era-sources"></p>
+              <a class="chapter-more" id="chapter-milestones" href="./milestones.html">Explore milestones ↗</a>
             </article>
 
             <aside class="map-history" aria-label="This year on the map">
@@ -94,8 +95,17 @@
               </div>
               <div class="history-legend" id="history-legend" aria-label="Map legend"></div>
               <details class="history-details"><summary>About these boundaries</summary><p id="boundary-note"></p><p>This layer records U.S. jurisdictions and selected claims. Indigenous nations and sovereignty are not fully represented. Terrain and coastline provide modern geographic context.</p><a href="/data/history-attribution.md" target="_blank">Method &amp; sources ↗</a><ul id="jurisdiction-list"></ul></details>
-              <div class="history-places"><span id="place-coverage" role="status"></span><label for="location-picker">Explore a place</label><select id="location-picker" aria-label="Select a visible location"><option value="">Select a place</option></select><button id="coverage-next" hidden></button></div>
+              <div class="history-places">
+                <div class="map-scope" aria-label="Milestone date coverage"><button type="button" data-map-scope="period" aria-pressed="true">Historical period</button><button type="button" data-map-scope="year" aria-pressed="false">Exact year</button></div>
+                <p class="map-scope-note" id="map-scope-note"></p>
+                <a class="map-scope-note" href="/data/milestone-map-method.md" target="_blank" rel="noopener">How milestones are mapped ↗</a>
+                <span id="place-coverage" role="status"></span><label for="location-picker">Explore a place</label><select id="location-picker" aria-label="Select a visible location"><option value="">Select a place</option></select>
+                <button type="button" id="broad-milestones" hidden></button><button id="coverage-next" hidden></button>
+                <div class="map-event-steps" aria-label="Jump between milestone years"><button type="button" id="previous-milestone"></button><button type="button" id="next-milestone"></button></div>
+              </div>
             </aside>
+
+            <section class="map-place-panel" id="map-place-panel" aria-labelledby="map-place-title" hidden></section>
 
             <div class="map-tools" aria-label="Map controls">
               <button id="zoom-in" title="Zoom in" aria-label="Zoom in" data-icon="plus"></button
@@ -139,12 +149,13 @@
             <div class="notes-inner">
               <h2>About this prototype</h2>
               <p class="notes-lead">
-                City markers follow the inclusive date ranges of published stories, not city lifespans. Historical jurisdiction boundaries cover 1783–2000; earlier years show geographic context without state lines. Later years use modern Census boundaries. This layer records U.S. jurisdictions and selected claims, not the full geography of Indigenous nations or sovereignty.
+                Place markers show milestones and city stories in the selected historical period, or the exact year when that option is selected. Each milestone explains its local connection and cites its evidence. National and regional entries without a supported city connection remain available through “Across regions &amp; the nation.” Points are approximate geographic references, not exact event addresses. Historical jurisdiction boundaries follow the selected year and cover 1783–2000; earlier years show geographic context without state lines. Later years use modern Census boundaries. This layer records U.S. jurisdictions and selected claims, not the full geography of Indigenous nations or sovereignty.
               </p>
               <div class="notes-grid">
                 <div>
                   <span class="eyebrow">Photographs</span>
                   <p id="archive-credit"></p>
+                  <p><a href="./milestones.html#method">Historical sources &amp; method</a> · <a href="/data/content-policy.md">Sourcing &amp; reuse policy</a>. A citation does not grant permission to reproduce text, photographs, or other media.</p>
                 </div>
                 <div>
                   <span class="eyebrow">Map data</span>

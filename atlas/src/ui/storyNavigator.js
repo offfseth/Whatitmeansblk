@@ -1,6 +1,6 @@
 import { storyMoments, adjacentStoryYear } from '../state/storyMoments.js';
 
-export function createStoryNavigator(root, locations, onYear) {
+export function createStoryNavigator(root, locations, onYear, { includeSteps = true } = {}) {
   const moments = storyMoments(locations);
   const navigation = document.createElement('div');
   navigation.className = 'story-steps';
@@ -36,7 +36,8 @@ export function createStoryNavigator(root, locations, onYear) {
     return { button, moment };
   });
   details.append(summary, note, list);
-  root.append(navigation, details);
+  if (includeSteps) root.append(navigation);
+  root.append(details);
   return {
     update(year) {
       for (const { button, direction } of buttons) {

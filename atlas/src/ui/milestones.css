@@ -1,0 +1,84 @@
+:root { color-scheme: light; --paper: #f2e9d9; --ink: #25231f; --muted: #625b50; --accent: #964323; --rule: #c6bba8; }
+* { box-sizing: border-box; }
+body { margin: 0; color: var(--ink); background: var(--paper); font-family: 'Archivo', sans-serif; line-height: 1.65; }
+a { color: inherit; text-underline-offset: .22em; }
+a:hover { color: var(--accent); }
+button, input, select { font: inherit; }
+button, select { cursor: pointer; }
+button { color: inherit; }
+[hidden] { display: none !important; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 5px; }
+.skip-link { position: fixed; top: -100px; left: 20px; z-index: 10; padding: 12px; background: var(--paper); }
+.skip-link:focus { top: 8px; }
+.library-masthead { padding: 22px clamp(20px, 5vw, 80px); border-bottom: 1px solid var(--rule); display: flex; justify-content: space-between; align-items: center; gap: 24px; }
+.library-brand { font: 32px 'Bodoni Moda', Georgia, serif; text-decoration: none; letter-spacing: -.06em; white-space: nowrap; }
+.library-brand span { color: var(--accent); }
+.library-masthead nav { display: flex; gap: 30px; font-size: 13px; }
+main, .library-footer { width: min(1180px, calc(100% - 80px)); margin: auto; }
+.library-intro { padding: 72px 0 38px; }
+.eyebrow { font-size: 11px; text-transform: uppercase; letter-spacing: .17em; font-weight: 500; }
+h1, h2, h3 { font-family: 'Bodoni Moda', Georgia, serif; font-weight: 500; }
+h1 { font-size: clamp(44px, 6.1vw, 88px); line-height: 1.08; letter-spacing: -.055em; margin: 25px 0 30px; }
+h1 em { display: block; color: var(--accent); font-weight: 400; }
+.library-dek { display: grid; grid-template-columns: 1.3fr 1fr; gap: 80px; max-width: 1010px; }
+.library-dek p { margin: 0; font-size: 16px; }
+.library-dek p + p { color: var(--muted); font-size: 14px; }
+.library-stats { font-size: 12px; letter-spacing: .05em; margin-top: 30px; color: var(--muted); }
+#collection { scroll-margin-top: 24px; }
+.library-filters { border-top: 1px solid var(--ink); border-bottom: 1px solid var(--rule); padding: 22px 0; display: grid; grid-template-columns: 2fr 1.45fr 1.25fr 1fr auto; gap: 16px; align-items: end; }
+.library-filters label { display: grid; gap: 6px; min-width: 0; font-size: 11px; letter-spacing: .025em; }
+.library-filters input, .library-filters select { border: 1px solid #b6ab98; border-radius: 0; background: #fbf7ef; color: var(--ink); width: 100%; padding: 12px 10px; font-size: 13px; min-height: 46px; }
+.reset-filters { border: 0; border-bottom: 1px solid var(--muted); padding: 12px 0; margin-bottom: 1px; background: transparent; font-size: 12px; }
+.results-meta { display: flex; justify-content: space-between; gap: 20px; color: var(--muted); font-size: 12px; padding: 10px 0 14px; }
+.milestone { display: grid; grid-template-columns: 160px minmax(0, 1fr); gap: 50px; padding: 40px 0 46px; border-top: 1px solid var(--rule); }
+.milestone-date > span { font: 50px/1.1 'Bodoni Moda', Georgia, serif; letter-spacing: -.04em; color: var(--accent); }
+.milestone-date p { font-size: 12px; color: var(--muted); max-width: 150px; }
+.milestone-location { margin: 0 0 8px; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.milestone h2 { margin: 0 0 20px; font-size: clamp(26px, 2.6vw, 37px); line-height: 1.2; letter-spacing: -.025em; max-width: 800px; }
+.milestone h2 a { text-decoration: none; }
+.milestone-summary, .milestone-context { max-width: 760px; margin: 0 0 15px; font-size: 15px; }
+.milestone-context { color: var(--muted); font-size: 14px; }
+.milestone-topics { list-style: none; padding: 0; display: flex; flex-wrap: wrap; gap: 8px 20px; font-size: 10px; text-transform: uppercase; letter-spacing: .07em; color: var(--accent); margin: 22px 0; }
+.milestone-sources { border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule); max-width: 760px; font-size: 12px; }
+summary { cursor: pointer; padding: 14px 0; }
+.milestone-sources[open] summary { color: var(--accent); }
+.milestone-sources ol { padding-left: 22px; }
+.milestone-sources li { padding: 8px 0 16px 8px; }
+.source-publisher { display: block; font-weight: 600; font-size: 11px; }
+.milestone-sources small, .source-register small { display: block; color: var(--muted); margin-top: 4px; font-size: 11px; }
+.editorial-note { color: var(--muted); font-size: 10px; padding-bottom: 8px; }
+.milestone-actions { display: flex; flex-wrap: wrap; gap: 12px 30px; font-size: 11px; margin-top: 20px; }
+.load-more { display: block; margin: 12px auto 65px; border: 1px solid var(--ink); background: transparent; padding: 15px 32px; font-size: 13px; }
+.load-more:hover { background: var(--ink); color: var(--paper); }
+.library-empty { padding: 42px 0 80px; }
+.library-empty h3 { font-size: 30px; }
+.library-method { border-top: 1px solid var(--ink); padding: 40px 0 60px; scroll-margin-top: 24px; }
+.library-method h2 { font-size: 46px; line-height: 1.1; margin: 20px 0 36px; letter-spacing: -.035em; }
+.method-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 70px; }
+.method-columns h3 { font-size: 24px; margin: 0; }
+.method-columns p { font-size: 13px; color: var(--muted); }
+.source-register { margin-top: 30px; border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule); font-size: 13px; }
+.source-register ol { display: grid; grid-template-columns: 1fr 1fr; gap: 24px 60px; padding: 10px 24px 24px; }
+.source-register li { padding-left: 8px; overflow-wrap: anywhere; }
+.library-footer { border-top: 1px solid var(--rule); padding: 25px 0 40px; display: flex; justify-content: space-between; gap: 25px; font-size: 12px; }
+@media (max-width: 1000px) {
+  .library-filters { grid-template-columns: 1fr 1fr; }
+  .library-search { grid-column: 1 / -1; }
+  .reset-filters { justify-self: start; }
+}
+@media (max-width: 600px) {
+  main, .library-footer { width: calc(100% - 40px); }
+  .library-masthead { align-items: start; gap: 20px; }
+  .library-brand { font-size: 28px; }
+  .library-masthead nav { display: grid; gap: 8px; font-size: 11px; text-align: right; }
+  .library-intro { padding-top: 42px; }
+  .library-dek, .method-columns, .source-register ol { grid-template-columns: 1fr; gap: 22px; }
+  .milestone { grid-template-columns: 1fr; gap: 16px; padding: 30px 0 36px; }
+  .milestone-date { display: flex; align-items: baseline; gap: 20px; }
+  .milestone-date > span { font-size: 36px; }
+  .milestone-date p { margin: 0; max-width: none; }
+  .results-meta, .library-footer { flex-direction: column; gap: 0; }
+  .results-meta p { margin: 4px 0; }
+  .library-method h2 { font-size: 37px; }
+  .library-stats { font-size: 11px; }
+}

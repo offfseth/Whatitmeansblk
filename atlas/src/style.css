@@ -702,6 +702,8 @@ main {
   color: var(--paper);
   border-bottom-color: var(--ember);
 }
+.era-sources { display: flex; flex-wrap: wrap; gap: 6px; font-size: 10px; color: var(--paper-mute); margin: 10px 0 0; }
+.masthead .library-link { pointer-events: auto; display: block; white-space: nowrap; }
 /* A selected place takes the chapter's place rather than crowding it. */
 .stage:has(.selection:not([hidden])) .chapter {
   opacity: 0;

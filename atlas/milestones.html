@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#f2e9d9" />
+    <meta name="description" content="Explore sourced milestones in African American history. Original summaries, archival references, and connections to the Black Atlas map." />
+    <title>Historical milestones — Black Atlas</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="stylesheet" href="/fonts/fonts.css" />
+  </head>
+  <body>
+    <a class="skip-link" href="#collection">Skip to milestones</a>
+    <header class="library-masthead">
+      <a class="library-brand" href="./">Black Atlas<span>.</span></a>
+      <nav aria-label="Main navigation"><a href="./">Explore the map ↗</a><a href="#method">Sources &amp; method</a></nav>
+    </header>
+    <main>
+      <section class="library-intro" aria-labelledby="library-title">
+        <p class="eyebrow">The reading room / A growing chronology</p>
+        <h1 id="library-title">History, <em>with its sources.</em></h1>
+        <div class="library-dek"><p>A place to begin, and a path to keep learning. Explore the people, collective efforts, cultural achievements, and struggles that shaped African American history.</p><p>Every milestone has an original summary and linked evidence. This is a selection, not a complete history; 1619 is this atlas’s starting point.</p></div>
+        <p class="library-stats" id="library-stats"></p>
+      </section>
+      <section id="collection" aria-labelledby="collection-title" tabindex="-1">
+        <h2 id="collection-title" class="eyebrow">Find a milestone</h2>
+        <form id="milestone-filters" class="library-filters" role="search">
+          <label class="library-search">Search the collection<input type="search" id="milestone-search" name="q" placeholder="A person, place, event, or year…" /></label>
+          <label>Period<select id="milestone-era" name="era"><option value="">All periods</option></select></label>
+          <label>Theme<select id="milestone-topic" name="topic"><option value="">All themes</option></select></label>
+          <label>Order<select id="milestone-order" name="order"><option value="oldest">Oldest first</option><option value="newest">Newest first</option></select></label>
+          <button type="reset" class="reset-filters">Clear filters</button>
+        </form>
+        <div class="results-meta"><p id="milestone-count" role="status" aria-live="polite"></p><p id="filter-context"></p></div>
+        <div id="milestone-results"></div>
+        <div class="library-empty" id="milestone-empty" hidden><h3>No milestones match these filters.</h3><p>Try a broader search or clear the filters to return to the collection.</p></div>
+        <button id="load-milestones" class="load-more" type="button" hidden>Show more milestones ↓</button>
+      </section>
+      <section id="method" class="library-method" aria-labelledby="method-title">
+        <p class="eyebrow">Sources &amp; method</p><h2 id="method-title">Follow the evidence.</h2>
+        <div class="method-columns"><div><h3>What supports each entry</h3><p>The references beneath each milestone support its date, summary, and context. Source labels distinguish original records from institutional histories and scholarly interpretation. Review dates record when the sources were consulted, not when an event happened.</p><p>Long movements have approximate date ranges. Period filters include events that overlap a chapter, so the Great Migration can appear in several periods. Map markers connect milestones and city stories to documented places and time ranges. National and regional entries without a city pin remain accessible on the map. A local connection can cover a shorter period than the whole movement.</p></div><div><h3>How this collection was written</h3><p id="discovery-note"></p><p>New entries use original summaries. This collection reproduces no source photographs or direct quotations. Links let you read the underlying evidence at its publisher.</p><p><a href="/data/content-policy.md">Read the sourcing &amp; reuse policy ↗</a></p></div></div>
+        <details class="source-register"><summary>Browse the complete source register <span id="source-count"></span></summary><ol id="source-register"></ol></details>
+      </section>
+    </main>
+    <footer class="library-footer"><a href="./">↖ Return to the map</a><span>Black Atlas / An archive in progress</span></footer>
+    <noscript><p class="library-empty">Enable JavaScript to search and read the milestone collection. The <a href="/data/content-policy.md">sourcing policy</a> is available without JavaScript.</p></noscript>
+    <script type="module" src="/src/milestonesPage.js"></script>
+  </body>
+</html>

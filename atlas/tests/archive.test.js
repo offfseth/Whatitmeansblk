@@ -42,7 +42,7 @@ test("every plate joins a real period and every year has plates to show", () => 
     assert.ok(years.has(plate.eraYear), plate.src + " has no period");
     assert.match(plate.src, /^\/[\w./-]+\.(webp|jpg|jpeg|png)$/);
     assert.ok(plate.caption && plate.credit && plate.source);
-    assert.ok(["cleared", "unverified"].includes(plate.rights));
+    assert.equal(plate.rights, "cleared");
   }
   for (const year of [MIN_YEAR, 1700, 1865, 1916, 1954, 1968, MAX_YEAR])
     assert.ok(platesForYear(year).length > 0, "no plates for " + year);
@@ -53,11 +53,13 @@ test("plate files exist on disk", async () => {
     assert.ok((await stat(file)).size > 0, plate.src + " is missing");
   }
 });
-test("uncleared rights are surfaced rather than swallowed", () => {
-  for (const plate of unclearedPlates) assert.ok(!plate.placeholder);
+test("published credits cover every real photograph and exclude unverified assets", () => {
+  assert.equal(unclearedPlates.length, 0);
   const credits = archiveCredits().join(" ");
-  for (const plate of unclearedPlates)
-    assert.match(credits, /rights not cleared/);
+  for (const plate of archive.filter(plate => !plate.placeholder)) {
+    assert.ok(credits.includes(plate.caption));
+    assert.ok(credits.includes(plate.credit));
+  }
   assert.ok(!credits.includes("Placeholder plate"));
 });
 test("a cleared plate says why it is free and where it came from", () => {

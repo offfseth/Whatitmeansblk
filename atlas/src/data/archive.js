@@ -3,7 +3,8 @@ import { eras, getEra } from "./eras.js";
 /** The slideshow that runs behind and above the map, filtered by period.
  *
  * HOW TO ADD A PICTURE
- *   1. Put the file in public/archive/ (WebP or JPEG; ~1200px wide is plenty,
+ *   1. Verify the specific item's reuse evidence, then put the file in
+ *      public/archive/ (WebP or JPEG; ~1200px wide is plenty,
  *      the layer is blurred and dimmed). Keep roughly 3–6 plates per period:
  *      the set for one period is cycled, so more plates means a longer loop
  *      and more memory held at once.
@@ -16,18 +17,18 @@ import { eras, getEra } from "./eras.js";
  *      Without it the band crops to the middle and beheads anyone standing
  *      off-centre. A wide source survives the crop best: if the photograph is
  *      a tall portrait, cut it to roughly 16:9 around the subject first.
- *   4. `rights` must be "cleared" only once someone has actually checked the
- *      licence, and a cleared plate must say why in `basis`. Anything else
- *      keeps the "rights not cleared" warning visible in the footer, which is
- *      the point: a memorial must not quietly present unverified material as
- *      a record.
+ *   4. `rights` must be "cleared" only after checking the item-specific reuse
+ *      evidence, recorded in `basis` and `source`. Unverified assets belong
+ *      outside public/ and must not be added to this published manifest.
+ *      See CONTENT_POLICY.md; credit is not permission.
  *
- * GOOD PUBLIC-DOMAIN SOURCES to fill the empty periods: the Library of
+ * COLLECTIONS TO RESEARCH for the empty periods: the Library of
  * Congress Prints & Photographs catalogue (loc.gov/pictures), the National
  * Archives catalogue (catalog.archives.gov), the Smithsonian Open Access
  * collection, and the NYPL Digital Collections public-domain set. Works of the
- * U.S. federal government — FSA/OWI, WPA, NARA — are generally public domain;
- * mid-century press photographs usually are NOT.
+ * U.S. federal employees made within official duties are generally public
+ * domain in the United States. Each collection can also contain protected
+ * third-party work; the institution's name alone is not a reuse basis.
  *
  * Plates marked `placeholder: true` are the generated stand-ins from
  * scripts/prepare-memorial.mjs: aged emulsion, grain and scratches depicting
@@ -81,11 +82,9 @@ export const archive = [
   stand(1916, 8),
 
   // ---- The Civil Rights Movement, 1954–1967 ----------------------------
-  // Chronological, so the loop walks the period forward. Every plate below
-  // except the supplied one is public domain: a work of the U.S. federal
-  // government, or an item the Library of Congress states has no known
-  // restrictions on publication. `source` is the page the file came from, so
-  // the claim can be rechecked rather than taken on trust.
+  // Federal works and item-specific Library of Congress rights advisories.
+  // "No known restrictions" is an institutional advisory, not a blanket
+  // public-domain declaration. Preserve that distinction in the credits.
   {
     src: "/archive/1957-little-rock-nine.webp",
     focus: [32, 50],
@@ -112,17 +111,6 @@ export const archive = [
     rights: "cleared",
     basis:
       "Made by the official photographer of the U.S. Information Agency, so a work of the federal government.",
-  },
-  {
-    src: "/archive/1963-march-on-washington.webp",
-    focus: [72, 34],
-    eraYear: 1954,
-    year: 1963,
-    caption:
-      "Martin Luther King Jr. addresses the March on Washington for Jobs and Freedom, Lincoln Memorial, 28 August 1963",
-    credit: "Photographer unidentified",
-    source: "Supplied for this prototype",
-    rights: "unverified",
   },
   {
     src: "/archive/1964-king-press-conference.webp",
@@ -171,7 +159,11 @@ export const archive = [
 ];
 
 const byEra = new Map(eras.map((era) => [era.year, []]));
-for (const plate of archive) byEra.get(plate.eraYear)?.push(plate);
+export function isPublishablePlate(plate) {
+  return plate.rights === 'cleared' && Boolean(plate.basis?.trim()) &&
+    (plate.placeholder || /^https:\/\//.test(plate.source));
+}
+for (const plate of archive.filter(isPublishablePlate)) byEra.get(plate.eraYear)?.push(plate);
 
 /** Plates for the period containing `year`, newest era first if one is empty.
  * Never returns an empty list: a period with no plates falls back to the
@@ -182,7 +174,7 @@ export function platesForYear(year) {
     const plates = byEra.get(eras[i].year);
     if (plates?.length) return plates;
   }
-  return archive;
+  return archive.filter(isPublishablePlate);
 }
 
 /** True while every plate on screen is a generated stand-in — said out loud in
@@ -198,7 +190,7 @@ export const unclearedPlates = archive.filter(
 export function archiveCredits() {
   const seen = new Set();
   return archive
-    .filter((p) => !p.placeholder && !seen.has(p.src) && seen.add(p.src))
+    .filter((p) => !p.placeholder && isPublishablePlate(p) && !seen.has(p.src) && seen.add(p.src))
     .map(
       (p) =>
         p.caption +
