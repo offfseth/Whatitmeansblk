@@ -2,3 +2,4 @@ node_modules/
 dist/
 .cache/
 private/
+public/__layout-check.html
