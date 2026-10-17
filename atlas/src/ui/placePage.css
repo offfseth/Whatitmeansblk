@@ -1,6 +1,5 @@
 /* City stories: one responsive type scale and one palette, independent of map chrome. */
 .is-place-open .page-content { margin-left:0; }
-.is-place-open .drawer { display:none; }
 .place-page {
   --story-white:#faf8f3; --story-ink:#202e2c; --story-teal:#185d59;
   --story-mint:#9bd5c5; --story-clay:#a3452e; --story-coral:#f3ab8d;
@@ -64,15 +63,24 @@
 .place-coordinate-line { font-size:12px; line-height:1.8; padding:20px 0; color:#53645e; border-bottom:1px solid #203d3326; }
 .place-entry-year { display:block; margin-top:20px; font-size:13px; line-height:1.8; color:#53645e; }
 .place-chapters { display:grid; gap:8px; margin-top:30px; }
-.place-chapters button { text-align:left; display:grid; gap:8px; padding:14px 12px; background:none; border:0; border-left:2px solid transparent; color:#31483f; }
-.place-chapters button small { display:block; font-size:12px; line-height:1.65; color:var(--story-teal); }
-.place-chapters button span { display:block; font-size:14px; line-height:1.6; }
-.place-chapters button[aria-current="true"] { background:#185d590c; border-color:var(--story-teal); }
-.place-chapters button:hover { background:#185d5915; }
+.place-chapters :is(button,a) { text-align:left; display:grid; gap:8px; padding:14px 12px; background:none; border:0; border-left:2px solid transparent; color:#31483f; text-decoration:none; }
+.place-chapters :is(button,a) small { display:block; font-size:12px; line-height:1.65; color:var(--story-teal); }
+.place-chapters :is(button,a) span { display:block; font-size:14px; line-height:1.6; }
+.place-chapters :is([aria-current="true"],[aria-current="page"]) { background:#185d590c; border-color:var(--story-teal); }
+.place-chapters :is(button,a):hover { background:#185d5915; }
 .place-prose > section + section { margin-top:52px; }
 .place-prose h2 { color:#203e37; }
 .place-prose p { font-size:18px; line-height:1.9; color:#35463f; margin:0 0 24px; max-width:64ch; }
 .place-citation { display:inline-block; font-size:13px; line-height:1.7; color:var(--story-clay); }
+.place-citations { display:flex; flex-wrap:wrap; gap:8px 16px; margin-top:12px; }
+.place-dates .place-citation { color:#f3d2b2; }
+.place-point-note { margin-top:32px; padding:20px 0; border-top:1px solid #203d3326; font-size:14px; line-height:1.8; }
+.place-point-note summary { cursor:pointer; color:var(--story-teal); }
+.place-point-note a { color:var(--story-teal); }
+.place-scope-plate { padding:40px var(--story-gutter); border-top:1px solid #bce0cf70; max-width:900px; }
+.place-scope-plate > p { font:500 28px/1.4 var(--display); color:var(--story-coral); }
+.place-scope-plate > span:last-child { display:block; max-width:65ch; line-height:1.8; margin-top:20px; color:#c7d7cd; }
+.place-hero:has(.place-scope-plate) .place-hero-copy { padding-top:64px; }
 .place-dates { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,2fr); gap:48px; padding:70px var(--story-gutter); background:linear-gradient(110deg,#205a54,#143e3b); }
 .place-dates ol { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr)); gap:32px; margin:0; padding:0; list-style:none; }
 .place-dates li { border-top:1px solid #bce0cf70; padding-top:22px; }
@@ -105,12 +113,13 @@
 .place-source-note { color:#54665b; font-size:14px; max-width:70ch; }
 footer.place-footer { display:block; height:auto; padding:70px var(--story-gutter) 30px; background:#192d29; color:var(--story-white); }
 .place-related { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:32px; }
-.place-related > button { display:block; width:100%; text-align:left; background:none; border-top:2px solid #80b9a3; padding:24px 0; color:var(--story-white); }
-.place-related > button:nth-child(2) { border-color:var(--story-coral); }
-.place-related > button:nth-child(3) { border-color:#daca98; }
-.place-related > button:hover { background:#ffffff08; }
+.place-related > :is(button,a) { display:block; width:100%; text-align:left; background:none; border-top:2px solid #80b9a3; padding:24px 0; color:var(--story-white); text-decoration:none; }
+.place-related > :is(button,a):nth-child(2) { border-color:var(--story-coral); }
+.place-related > :is(button,a):nth-child(3) { border-color:#daca98; }
+.place-related > :is(button,a):hover { background:#ffffff08; }
 .place-related small { display:block; color:#b8d3c5; font-size:12px; line-height:1.7; letter-spacing:.05em; }
-.place-related button > span { display:flex; align-items:baseline; justify-content:space-between; gap:18px; font:500 clamp(26px,2.5vw,36px)/1.35 var(--display); margin-top:14px; }
+.place-related :is(button,a) > span { display:flex; align-items:baseline; justify-content:space-between; gap:18px; font:500 clamp(26px,2.5vw,36px)/1.35 var(--display); margin-top:14px; }
+.place-library-link { color:var(--story-mint); }
 .place-related button > span > span { flex-shrink:0; font:24px/1.4 var(--ui); color:var(--story-coral); }
 .place-related p { color:#c7d7cd; font-size:14px; line-height:1.8; margin:18px 0 0; }
 .place-colophon { display:flex; flex-wrap:wrap; justify-content:space-between; gap:20px; border-top:1px solid var(--story-rule); margin-top:40px; padding-top:24px; font-size:13px; color:#bed3c7; }

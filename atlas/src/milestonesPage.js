@@ -4,6 +4,7 @@ import { sources, discoverySource } from './data/sources.js';
 import { eras } from './data/eras.js';
 import { mapPlaces as locations, mapPlaceById } from './data/mapPlaces.js';
 import { filterMilestones, filtersFromSearch, searchFromFilters } from './state/milestoneFilters.js';
+import { milestoneRoute } from './state/milestoneRoute.js';
 
 const $ = id => document.getElementById(id);
 const escape = value => String(value).replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
@@ -26,7 +27,7 @@ $('source-register').innerHTML = Object.values(sources).sort((a, b) => a.publish
   .map(source => `<li>${sourceMarkup(source)}</li>`).join('');
 
 function card(event) {
-  const permalink = `./milestones.html?event=${encodeURIComponent(event.id)}`;
+  const permalink = `./?year=${event.year}&scope=period${milestoneRoute(event.id)}`;
   const evidenceIds = [...new Set([...event.sourceIds, ...event.geography.connections.flatMap(connection => connection.sourceIds)])];
   const mapLinks = event.geography.connections.map(connection => `<a href="./?year=${connection.from}&amp;scope=year&amp;place=${connection.placeId}">${escape(mapPlaceById.get(connection.placeId).name)} · ${connection.from}${connection.to === connection.from ? '' : '–' + connection.to} ↗</a>`).join('');
   return `<article class="milestone" id="event-${event.id}" aria-labelledby="title-${event.id}">
@@ -40,7 +41,7 @@ function card(event) {
         <p>Evidence for this entry’s date, summary, context, and place connections.</p><ol>${evidenceIds.map(id => `<li>${sourceMarkup(sources[id])}</li>`).join('')}</ol>
         <p class="editorial-note">Original Black Atlas summary · Reviewed ${event.reviewedAt} · No reproduced images or quotations.</p>
       </details>
-      <div class="milestone-actions">${mapLinks || `<a href="./?year=${event.year}&amp;scope=year&amp;place=%40broad">View ${event.year} on the map ↗</a>`}<a href="${permalink}" aria-label="Permanent link: ${escape(event.title)}">Link to this milestone ↗</a></div>
+      <div class="milestone-actions">${mapLinks || `<a href="./?year=${event.year}&amp;scope=year&amp;place=%40broad">View ${event.year} on the map ↗</a>`}<a href="${escape(permalink)}" aria-label="Read the full story: ${escape(event.title)}">Read the full story ↗</a></div>
     </div></article>`;
 }
 

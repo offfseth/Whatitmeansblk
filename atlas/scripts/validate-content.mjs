@@ -8,12 +8,23 @@ import { validateGeography } from '../src/data/geographyValidation.js';
 import { archive } from '../src/data/archive.js';
 import { placeStories, getPlaceStory } from '../src/data/placeStories.js';
 import { validateContent } from '../src/data/contentValidation.js';
+import { getMilestoneStory } from '../src/data/milestoneStories.js';
 
 const errors = [
   ...validateContent({ milestones, sources, eras, locations: mapPlaces, archive }),
   ...validateGeography({ milestones, sources, mapPlaces, points: mapPlacePoints }),
 ];
 const published = new Set(archive.filter(plate => !plate.placeholder).map(plate => plate.src));
+for (const event of milestones) for (const placeId of event.placeIds.length ? event.placeIds : [null]) {
+  const story = getMilestoneStory(event.id, { placeId });
+  for (const section of story.sections) {
+    if (!section.sourceIndices.length || section.sourceIndices.some(index => !story.sources[index])) errors.push(`${event.id}: missing reader section citation`);
+  }
+}
+for (const place of mapPlaces) {
+  try { if (!(await stat(new URL('../public/places/' + place.id + '.svg', import.meta.url))).size) errors.push(`Empty place illustration: ${place.id}`); }
+  catch { errors.push(`Missing place illustration: ${place.id}`); }
+}
 // Vite copies public/ verbatim. Hiding an image in the UI alone is insufficient.
 for (const name of await readdir(new URL('../public/archive/', import.meta.url))) {
   if (!published.has('/archive/' + name)) errors.push(`Unregistered public/archive asset: ${name}`);

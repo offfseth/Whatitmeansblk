@@ -1,7 +1,7 @@
 import "./style.css";
 import "./ui/placePage.css";
 import "./ui/mapMilestones.css";
-import { createMapMilestones } from './ui/mapMilestones.js';
+import "./ui/atlasShell.css";
 import { mapCoverage, adjacentCoverageYear, readMapSearch } from './state/mapCoverage.js';
 import { mapPlaces } from './data/mapPlaces.js';
 import { createPlaceExplorer } from "./ui/placeExplorer.js";
@@ -17,7 +17,6 @@ import {
   unclearedPlates,
 } from "./data/archive.js";
 import { createArchiveStage } from "./ui/archiveStage.js";
-import { createDrawer } from "./ui/drawer.js";
 import { createSky } from "./ui/sky.js";
 import { createStoryNavigator } from "./ui/storyNavigator.js";
 import { milestones } from "./data/milestones.js";
@@ -49,21 +48,14 @@ let scene = null,
   playback = null;
 let mapScope = readMapSearch(location.search).scope;
 timeline.select(readMapSearch(location.search).place || null);
-const mapPanel = createMapMilestones($('map-place-panel'), {
-  onClose: closeMapPlace,
-  onStory: (id, year) => placeExplorer.open(id, { year }),
-  onYear: year => { stopPlayback(); mapScope = 'year'; timeline.setYear(year); render(timeline.get()); mapPanel.focus(); },
-});
 function closeMapPlace() {
   timeline.select(null);
   $('location-picker').focus({ preventScroll: true });
 }
 function selectMapPlace(id) {
   stopPlayback();
-  timeline.select(id || null);
-  if (!id) return;
-  if (window.matchMedia('(max-width: 960px)').matches) $('map-place-panel').scrollIntoView({ block: 'start', behavior: 'instant' });
-  mapPanel.focus();
+  if (!id) { timeline.select(null); return; }
+  placeExplorer.openPlace(id);
 }
 const storyNavigator = createStoryNavigator(document.querySelector('.history-places'), locations, year => {
   stopPlayback();
@@ -91,13 +83,7 @@ const chapterNames = [
   "Civil rights",
   "After the movement",
 ];
-$("era-buttons").innerHTML = eras
-  .map((era, index) =>
-    `<button data-year="${era.year}" aria-label="${era.period}, ${era.span}">
-      <span>${era.span}</span><strong>${chapterNames[index]}</strong>
-    </button>`,
-  )
-  .join("");
+for (const era of eras) $('era-picker').add(new Option(`${era.span} · ${era.period}`, String(era.year)));
 /* The same photograph twice, doing two different jobs: the sky carries the
  * mood over the whole room, and the plate below carries the record. They
  * always show the same image, so the atmosphere is never something the
@@ -217,21 +203,16 @@ function render({ year, selectedId }) {
   renderHistory(year, coverage);
   archiveStage.setPlates(platesForYear(year));
   document.documentElement.style.setProperty("--era-color", era.color);
-  document.querySelectorAll("#era-buttons [data-year]").forEach((button) => {
-    const current = Number(button.dataset.year) === era.year;
-    button.classList.toggle("active", current);
-    button.setAttribute("aria-pressed", String(current));
-  });
+  $('era-picker').value = String(era.year);
   const picker = $("location-picker");
   picker.replaceChildren(
     new Option(visible.length ? "Select a place" : "No mapped places in this window", ""),
-    ...visible.map((place) => new Option(`${place.name} · ${place.entries.length} ${place.entries.length === 1 ? 'milestone' : 'milestones'}${place.stories.length ? ' + city stories' : ''}`, place.id)),
+    ...visible.map((place) => new Option(place.name, place.id)),
   );
   picker.value = visible.some(place => place.id === selectedId) ? selectedId : '';
   picker.disabled = visible.length === 0;
-  mapPanel.render(coverage, selectedId, mapScope);
   scene?.update(year, new Set(visible.map((l) => l.id)), selectedId, new Map(visible.map(place => [place.id, place])));
-  if (!playback && !location.hash.startsWith('#/place/')) {
+  if (!playback && !/^#\/(place|milestone)\//.test(location.hash)) {
     const params = new URLSearchParams(location.search);
     params.set('year', year); params.set('scope', mapScope);
     if (selectedId) params.set('place', selectedId); else params.delete('place');
@@ -247,10 +228,10 @@ function renderHistory(year, coverage) {
   $("boundary-note").textContent = description.note;
   $('map-scope-note').textContent = `Pins: ${coverage.window.label}. Boundaries: ${year}.`;
   document.querySelectorAll('[data-map-scope]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.mapScope === mapScope)));
-  $("place-coverage").textContent = `${visible.length} mapped places · ${coverage.events.length} milestones in ${coverage.window.label}`;
+  $("place-coverage").textContent = `${visible.length} places · ${coverage.events.length} milestones`;
   const broad = $('broad-milestones');
   broad.hidden = !coverage.broad.length;
-  broad.textContent = `Across regions & the nation · ${coverage.broad.length} milestones ↗`;
+  broad.textContent = `Beyond one city · ${coverage.broad.length} milestones ↗`;
   const next = $("coverage-next");
   next.hidden = visible.length > 0 || coverage.broad.length > 0;
   if (!visible.length && !coverage.broad.length) {
@@ -300,12 +281,20 @@ $("year-form").addEventListener("submit", (e) => {
   stopPlayback();
   timeline.setYear($("year-input").value);
 });
-document.querySelectorAll("#era-buttons [data-year]").forEach((b) =>
-  b.addEventListener("click", () => {
-    stopPlayback();
-    timeline.setYear(b.dataset.year);
-  }),
-);
+$('era-picker').onchange = event => { stopPlayback(); timeline.setYear(event.target.value); };
+document.querySelectorAll('[data-atlas-detail]').forEach(button => {
+  button.onclick = () => {
+    const details = $(button.dataset.atlasDetail);
+    details.open = true;
+    $('map-options').open = false;
+    details.scrollIntoView({ block: 'start', behavior: 'instant' });
+    details.querySelector('summary').focus({ preventScroll: true });
+  };
+});
+$('return-to-atlas').onclick = () => {
+  $('stage').scrollIntoView({ block: 'start', behavior: 'instant' });
+  $('era-picker').focus({ preventScroll: true });
+};
 document.querySelectorAll("[data-map-year]").forEach(button => {
   button.onclick = () => { stopPlayback(); timeline.setYear(button.dataset.mapYear); };
 });
@@ -331,45 +320,13 @@ $("play").onclick = () => {
     if (y >= MAX_YEAR) stopPlayback();
   }, 100);
 };
-const drawerUI = createDrawer({
-  drawer: $("drawer"), handle: $("drawer-handle"), body: $("drawer-body"),
-  backdrop: $("drawer-backdrop"), page: $("page-content"),
-  onOpen(open) {
-    archiveStage.setHidden(open || document.hidden);
-    if (open) stopPlayback();
-  },
-});
-/* Arrival, then exploration.
- *
- * The page opens as a title over a photograph with the land sitting back
- * behind it, which is the only moment the atlas gets to be a single image.
- * The first sign of intent — a drag on the land, a chapter, a year, a key,
- * a scroll — dissolves the title and brings the room up to full.
- *
- * The overture is pointer-transparent, so that first drag both dismisses it
- * and turns the land underneath: nothing has to be clicked away. Reduced
- * motion skips the opening state entirely, in CSS, because without the
- * dissolve there would be no way out of it.
- */
-const exploring = new AbortController();
-function beginExploring() {
-  if (document.body.classList.contains("is-exploring")) return;
-  document.body.classList.add("is-exploring");
-  exploring.abort();
-}
-{
-  const { signal } = exploring;
-  const on = (target, type, options) =>
-    target.addEventListener(type, beginExploring, { passive: true, signal, ...options });
-  for (const type of ["pointerdown", "wheel", "keydown"]) on($("stage"), type);
-  on($("stage"), "focusin");
-  on(window, "scroll");
-  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) beginExploring();
-}
 const placeExplorer = createPlaceExplorer({
   timeline, getScene: () => scene, archiveStage, stopPlayback,
-  closeDrawer: () => drawerUI.close(),
+  closeControls: () => { $('map-options').open = false; },
+  getScope: () => mapScope, setScope: scope => { mapScope = scope; },
 });
+// Existing library links still enter the new reader at their requested place and time.
+if (!location.hash && timeline.get().selectedId) placeExplorer.openPlace(timeline.get().selectedId);
 $("location-picker").onchange = (e) => {
   selectMapPlace(e.target.value);
 };
@@ -381,13 +338,20 @@ $("relief").onchange = (e) => scene?.setRelief(e.target.checked);
 $("borders").onchange = (e) => scene?.setBorders(e.target.checked);
 document.addEventListener("keydown", (e) => {
   if (e.key !== "Escape") return;
+  if ($('map-options').open) {
+    $('map-options').open = false;
+    $('map-options').querySelector('summary').focus({ preventScroll: true });
+  }
   if (!placeExplorer.active && timeline.get().selectedId) closeMapPlace();
+});
+document.addEventListener('pointerdown', event => {
+  if (!event.target.closest('#map-options')) $('map-options').open = false;
 });
 document.addEventListener("visibilitychange", () => {
   if (document.hidden) stopPlayback();
   // Stop compositing the drifting plates while the tab is in the background.
   document.body.classList.toggle("archive-paused", document.hidden);
-  archiveStage.setHidden(document.hidden || placeExplorer.active || $("drawer").classList.contains("is-open"));
+  archiveStage.setHidden(document.hidden || placeExplorer.active);
 });
 $("map").addEventListener("asseterror", () =>
   showError("Some terrain imagery could not load. Reload to try again."),
@@ -470,10 +434,7 @@ if (import.meta.hot)
     lifecycle.abort();
     photoMotion.removeEventListener("change", updatePhotoMotion);
     placeExplorer.dispose();
-    drawerUI.dispose();
     archiveStage.dispose();
     sky.dispose();
-    mapPanel.dispose();
-    exploring.abort();
     scene?.dispose();
   });

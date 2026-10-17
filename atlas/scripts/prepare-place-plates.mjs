@@ -1,4 +1,6 @@
 import { readFile, mkdir, writeFile } from 'node:fs/promises';
+import { mapPlaces } from '../src/data/mapPlaces.js';
+import { mapPlacePoints } from '../src/data/mapPlacePoints.js';
 const data = JSON.parse(await readFile(new URL('../public/data/map.json', import.meta.url), 'utf8'));
 const output = new URL('../public/places/', import.meta.url);
 await mkdir(output, { recursive: true });
@@ -10,8 +12,8 @@ const paths = data.states.features.map((state) => {
     .join(' ') + 'Z').join(' ')).join(' ');
   return '<path d="' + d + '"/>';
 }).join('');
-for (const place of data.locations) {
-  const [x, y] = place.point;
+for (const place of mapPlaces) {
+  const [x, y] = mapPlacePoints[place.id];
   const svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="' + [x - 230, y - 260, 460, 520].join(' ') + '">' +
     '<rect x="-1000" y="-1000" width="4000" height="4000" fill="#343d3b"/>' +
     '<g fill="#d0c0a0" stroke="#786e5c" stroke-width=".65" stroke-linejoin="round">' + paths + '</g>' +
@@ -20,4 +22,4 @@ for (const place of data.locations) {
     '<circle cx="' + x + '" cy="' + y + '" r="9" fill="#b24e28" stroke="#f2e9d9" stroke-width="2"/></svg>';
   await writeFile(new URL(place.id + '.svg', output), svg);
 }
-console.log('Prepared ' + data.locations.length + ' geographic place plates.');
+console.log('Prepared ' + mapPlaces.length + ' geographic place plates.');
