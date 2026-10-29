@@ -8,6 +8,9 @@ import { getPlaceStory, placeStories } from '../src/data/placeStories.js';
 import { milestoneRoute, parseMilestoneRoute, resolveMilestone, milestoneForPlace } from '../src/state/milestoneRoute.js';
 import { mapCoverage } from '../src/state/mapCoverage.js';
 import { placePageMarkup } from '../src/ui/placePage.js';
+import { milestoneEssays, essaySourceIds } from '../src/data/milestoneEssays.js';
+import { sources } from '../src/data/sources.js';
+import { validateEssays } from '../src/data/essayValidation.js';
 
 test('all milestones and evidenced city connections have complete cited reading pages and stable URLs', async () => {
   for (const event of milestones) {
@@ -17,20 +20,60 @@ test('all milestones and evidenced city connections have complete cited reading 
       const story = getMilestoneStory(event.id, selection);
       assert.equal(story.placeId, placeId);
       assert.equal(story.sections[0].paragraphs[0], event.summary);
-      assert.equal(story.sections[1].paragraphs[0], event.context);
+      assert.equal(story.sections[1].paragraphs[0], milestoneEssays[event.id].sections[0].paragraphs[0].text);
+      assert.ok(story.sections.length >= 6);
       for (const section of story.sections) {
         assert.ok(section.sourceIndices.length, event.id + ': missing evidence');
         for (const index of section.sourceIndices) assert.equal(new URL(story.sources[index][2]).protocol, 'https:');
+        assert.equal(section.paragraphSourceIndices.length, section.paragraphs.length);
+        for (const indices of section.paragraphSourceIndices) {
+          assert.ok(indices.length);
+          for (const index of indices) assert.ok(story.sources[index]);
+        }
       }
+      assert.equal(story.dates.length, story.dateSources.length);
+      assert.ok(story.dates.length >= 3);
+      for (const indices of story.dateSources) for (const index of indices) assert.ok(story.sources[index]);
+      for (const id of essaySourceIds(milestoneEssays[event.id])) assert.ok(story.sourceDetails.some(source => source.id === id));
       const markup = placePageMarkup(story, selection.year);
-      for (const label of ['What happened', 'Why it matters', 'Follow the sources.', 'The visual record.', 'Sourcing &amp; reuse policy']) assert.ok(markup.includes(label), event.id + ': ' + label);
+      for (const label of ['At a glance', 'In this story', 'Reading the evidence', 'Follow the sources.', 'The visual record.', 'Sourcing &amp; reuse policy']) assert.ok(markup.includes(label), event.id + ': ' + label);
+      const ids = [...markup.matchAll(/\sid="([^"]+)"/g)].map(match => match[1]);
+      assert.equal(new Set(ids).size, ids.length, event.id + ': duplicate DOM target');
+      for (const [, target] of markup.matchAll(/data-story-section="([^"]+)"/g)) assert.ok(ids.includes(target), event.id + ': broken section/reference link ' + target);
       assert.equal((markup.match(/<h1 /g) ?? []).length, 1);
       assert.ok(!markup.includes('undefined') && !markup.includes('NaN'));
-      assert.deepEqual(story.images, []);
+      assert.deepEqual(story.images.map(plate => plate.src), event.images);
+      for (const plate of story.images) {
+        assert.ok(markup.includes(plate.src));
+        assert.ok(markup.includes(plate.source));
+        assert.ok(markup.includes(plate.rightsSource));
+        assert.ok(markup.includes(plate.rightsReviewedAt));
+      }
       assert.ok(story.chapters.some(chapter => chapter.id === event.id));
       if (placeId) assert.ok((await stat(new URL('../public/places/' + placeId + '.svg', import.meta.url))).size > 0);
       else assert.ok(!markup.includes('/places/') && !markup.includes('place-coordinate-line'));
     }
+  }
+});
+
+test('publication checks prevent uncited passages, timelines, missing essays and invalid contents targets', () => {
+  const base = { essays: milestoneEssays, milestones, sources };
+  assert.deepEqual(validateEssays(base), []);
+  const id = milestones[0].id;
+  const missing = { ...milestoneEssays };
+  delete missing[id];
+  assert.ok(validateEssays({ ...base, essays: missing }).some(error => error.includes('missing in-depth')));
+  for (const mutate of [
+    essay => { essay.sections[0].paragraphs[0].sourceIds = []; },
+    essay => { essay.sections[0].paragraphs[0].sourceIds = ['__proto__']; },
+    essay => { essay.timeline[0].sourceIds = ['missing']; },
+    essay => { essay.sections[1].id = essay.sections[0].id; },
+    essay => { essay.sections[0].id = 'overview'; },
+    essay => { essay.sourceNote.sourceIds = []; },
+  ]) {
+    const essay = structuredClone(milestoneEssays[id]);
+    mutate(essay);
+    assert.ok(validateEssays({ ...base, essays: { ...milestoneEssays, [id]: essay } }).length > 0);
   }
 });
 

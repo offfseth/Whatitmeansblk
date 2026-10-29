@@ -1,5 +1,12 @@
 # Validation
 
+## Cited event essays — October 28, 2026
+
+- All 53 milestones now have expanded reading pages, with 146 registered references. Paragraphs, context timelines, and evidence notes retain their own source IDs; publication checks reject missing essays and uncited passages.
+- This pass focused on Brown v. Board, Montgomery, and the March on Washington: implementation after Brown, the boycott's transport network, and congressional opposition to the march. New factual additions were checked against the linked National Archives and Stanford King Institute accounts.
+- Numbered references, source-return controls, contents navigation, and full-text collection search are implemented. Earlier desktop browser checks confirmed citation focus/return and preservation of the event URL. Phone viewport verification was interrupted by a browser-tool timeout and remains incomplete.
+- Final automated suite: all 64 tests passed after the focused content additions. Production build passed using `npm.cmd run build -- --configLoader native`; the existing large-chunk advisory remains. Content publication checks also passed.
+
 ## Map surroundings — October 10, 2026
 
 - Replaced the runtime sea.webp backdrop (neighboring-country silhouettes and lit water) with a static 128px alpha texture and an unlit matte material. The radial field fades to zero alpha at its edges and is disposed with the other map textures.

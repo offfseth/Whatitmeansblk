@@ -9,8 +9,18 @@ To add a milestone:
 1. Read and verify its evidence. Add bibliographic records with stable IDs; use additional sources for disputed or compound claims.
 2. Write original prose. Cite every claim through the entry’s references, adding claim-level locators or splitting the entry when a combined citation list would be ambiguous.
 3. Supply a date label and year range. Add the geographic classification in `src/data/milestoneGeography.js`. Each city connection needs a place ID, an explanation of its role, evidence sources, and inclusive dates inside the event's overall bounds. `placeIds` are derived from these connections. For national or regional entries without a supported pin, record the scope and an explanation. A connection creates map coverage; it does not create a long city essay.
-4. Keep `images` and `quotations` empty under the current text-only milestone contract. Adding them requires both documented rights and a renderer that displays their evidence and credits. The publication gate deliberately rejects them until that workflow is implemented.
+4. Add photograph paths to `images` only after registering them in `archive.js` with an explicit `milestoneIds` connection, image dimensions, item source, credit, caption, depicted year, rights basis and evidence URL, reviewer, review date, and modification notes. The reader shows credits and reuse evidence. The publication gate rejects unregistered or unreviewed images. Keep `quotations` empty until a reviewed quotation workflow is implemented.
 5. Run `npm run check:content`, `npm test`, and `npm run build`. The build runs content checks automatically. Inspect the new entry, references, filtering, and map-year link in the browser.
+
+## In-depth milestone essays
+
+Every milestone also requires an essay in `src/data/essays/`, joined through `src/data/milestoneEssays.js` by its stable milestone ID. Keep the collection card concise; write the expanded account independently from the evidence. Include at least four event-specific sections explaining the background, people and institutions involved, events, and consequences. Section headings should describe the actual history, not repeat a generic template.
+
+Each paragraph is `{ text, sourceIds }`; cite the sources supporting that paragraph rather than attaching the whole bibliography to every passage. Every timeline item is `{ date, text, sourceIds }`. Include at least three dated moments; background and aftermath may extend beyond the milestone's map coverage. Do not expand map coverage simply because an essay discusses earlier or later events. Explain the evidence's perspective or a substantive limitation in `sourceNote: { text, sourceIds }`.
+
+Section IDs must be unique within an essay; `overview` and `geography` are reserved by the reader. Record the essay's actual `reviewedAt`. Export newly verified bibliographic records with an actual `accessedAt`; a failed fetch is not a new access. The source register merges these records with the original references. The reader displays numbered paragraph references, source metadata, and a way back to the passage; the collection searches the expanded text too.
+
+The publication check rejects missing essays, uncited paragraphs or dates, unknown source IDs, and broken contents identifiers. These structural checks do not certify that a source supports a claim. Check the linked evidence and historical interpretation before marking an essay reviewed.
 
 The public archive’s allowlist is `src/data/archive.js`. Its five photographs have recorded item-specific reuse bases. One previously supplied, unidentified photograph is now excluded. Its original file is retained in ignored `private/uncleared/`; do not distribute that directory. Never put a withheld asset back into `public/` merely to hide it with CSS or a data flag. Vite serves/copies public assets even if no page references them.
 

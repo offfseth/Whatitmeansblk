@@ -1,3 +1,5 @@
+import { essaySources } from './milestoneEssays.js';
+
 // Sources support historical claims; a citation is never a media reuse license.
 // Types describe the linked material, not merely the institution hosting it.
 const reviewedAt = '2026-10-15';
@@ -63,8 +65,8 @@ const rows = [
   ['jackson-history', 'Smithsonian National Museum of African American History and Culture', 'Statement on the Supreme Court Appointment of Judge Ketanji Brown Jackson', 'https://nmaahc.si.edu/about/news/statement-supreme-court-appointment-judge-ketanji-brown-jackson', 'Institutional record'],
 ];
 
-export const sources = Object.fromEntries(rows.map(([id, publisher, title, url, type]) =>
-  [id, { id, publisher, title, url, type, accessedAt: reviewedAt }]));
+export const sources = { ...Object.fromEntries(rows.map(([id, publisher, title, url, type]) =>
+  [id, { id, publisher, title, url, type, accessedAt: reviewedAt }])), ...essaySources };
 
 export const discoverySource = {
   publisher: 'HISTORY', title: 'Black History Milestones: Timeline',

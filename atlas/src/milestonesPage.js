@@ -39,7 +39,7 @@ function card(event) {
       <p class="milestone-context">${escape(event.geography.note)}</p>
       <details class="milestone-sources"${filters.event ? ' open' : ''}><summary>Sources &amp; references (${evidenceIds.length})</summary>
         <p>Evidence for this entry’s date, summary, context, and place connections.</p><ol>${evidenceIds.map(id => `<li>${sourceMarkup(sources[id])}</li>`).join('')}</ol>
-        <p class="editorial-note">Original Black Atlas summary · Reviewed ${event.reviewedAt} · No reproduced images or quotations.</p>
+        <p class="editorial-note">Original Black Atlas summary · Reviewed ${event.reviewedAt} · ${event.images.length ? 'Credited archival photograph in the full story. No reproduced quotations.' : 'No reproduced images or quotations.'}</p>
       </details>
       <div class="milestone-actions">${mapLinks || `<a href="./?year=${event.year}&amp;scope=year&amp;place=%40broad">View ${event.year} on the map ↗</a>`}<a href="${escape(permalink)}" aria-label="Read the full story: ${escape(event.title)}">Read the full story ↗</a></div>
     </div></article>`;

@@ -100,6 +100,7 @@ export function createPlaceExplorer({ timeline, getScene, archiveStage, stopPlay
     getScene()?.setPaused(true);
     atlas.hidden = true;
     root.hidden = false;
+    page.setHidden(false);
     document.body.classList.remove('is-place-entering');
     document.body.classList.add('is-place-open');
     document.title = (story.kind === 'milestone' ? story.title : story.name) + ' — Black Atlas';
@@ -117,6 +118,7 @@ export function createPlaceExplorer({ timeline, getScene, archiveStage, stopPlay
     activeRoute = null;
     transition.hidden = true;
     root.hidden = true;
+    page.setHidden(true);
     atlas.hidden = false;
     atlas.inert = false;
     document.body.classList.remove('is-place-entering', 'is-place-open');

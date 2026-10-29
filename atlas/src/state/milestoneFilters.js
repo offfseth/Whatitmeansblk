@@ -1,6 +1,7 @@
 import { eras } from '../data/eras.js';
 import { sources } from '../data/sources.js';
 import { mapPlaceById } from '../data/mapPlaces.js';
+import { milestoneEssays, essaySourceIds } from '../data/milestoneEssays.js';
 
 const normalize = text => String(text).normalize('NFKD').replace(/[\u0300-\u036f]/g, '').replace(/[’']/g, '').toLowerCase();
 
@@ -13,9 +14,11 @@ export function filterMilestones(records, { query = '', era = '', topic = '', pl
     if (chapter && (item.endYear < chapter.year || item.year >= (next?.year ?? Infinity))) return false;
     if (topic && !item.topics.includes(topic)) return false;
     if (place && !item.placeIds.includes(place)) return false;
+    const essay = milestoneEssays[item.id];
     const text = normalize([item.title, item.date, item.location, item.summary, item.context, ...item.topics,
+      ...(essay?.sections.flatMap(section => [section.title, ...section.paragraphs.map(paragraph => paragraph.text)]) ?? []),
       ...item.placeIds.map(id => mapPlaceById.get(id)?.name ?? ''),
-      ...item.sourceIds.map(id => sources[id]?.publisher ?? '')].join(' '));
+      ...[...item.sourceIds, ...essaySourceIds(essay)].map(id => sources[id]?.publisher ?? '')].join(' '));
     return words.every(word => text.includes(word));
   }).sort((a, b) => order === 'newest' ? b.year - a.year : a.year - b.year);
 }

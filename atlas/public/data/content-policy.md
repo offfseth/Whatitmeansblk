@@ -24,7 +24,7 @@ Use original project assets, demonstrably public-domain material, appropriately 
 
 Unverified material must stay outside `public/`, production builds, screenshots, and distributed source packages. The supplied March on Washington photograph with an unidentified photographer has been withheld from the public archive and retained privately for possible identification. Do not republish older ZIPs or builds as if they passed this policy.
 
-No new historical images are included in the milestone collection. Existing map and font assets retain their own attribution and licenses. Generated geographic illustrations must be identified as illustrations, never presented as historical evidence.
+Milestone photographs are added one event at a time from the reviewed archive. The March on Washington page reuses the registered Rowland Scherman photograph of the procession's leaders (National Archives identifier 542000). Captions retain the date, credit, and original record; the image's disclosure also links to reuse evidence and records the review and modifications. Existing map and font assets retain their own attribution and licenses. Generated geographic illustrations must be identified as illustrations, never presented as historical evidence.
 
 ## Corrections and expansion
 

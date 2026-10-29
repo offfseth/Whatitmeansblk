@@ -38,6 +38,15 @@ test('period filtering includes overlapping movements but excludes adjacent sing
   assert.ok(!civilRights.includes('fair-housing-act'));
 });
 
+test('milestone images require event-specific registration and a documented rights review', () => {
+  const event = milestones.find(item => item.id === 'march-washington');
+  const plate = archive.find(item => item.src === event.images[0]);
+  for (const bad of [{ rights: 'unverified' }, { rightsSource: '' }, { rightsReviewedAt: '' }, { milestoneIds: [] }]) {
+    const changedArchive = archive.map(item => item === plate ? { ...item, ...bad } : item);
+    assert.ok(validateContent({ ...content, archive: changedArchive }).some(error => error.includes('march-washington: milestone media')));
+  }
+});
+
 test('search handles apostrophes, multiple terms, source institutions, themes, and place connections', () => {
   assert.equal(filterMilestones(milestones, { query: "Freedom's Journal" })[0].id, 'freedoms-journal');
   assert.equal(filterMilestones(milestones, { query: 'tubman maryland' })[0].id, 'tubman-escape');

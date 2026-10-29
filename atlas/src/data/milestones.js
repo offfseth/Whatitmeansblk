@@ -250,6 +250,7 @@ const records = [
   },
   {
     id: 'march-washington', year: 1963, date: 'August 28, 1963', title: 'The March on Washington calls for jobs and freedom',
+    images: ['/archive/1963-march-on-washington-leaders.webp', '/archive/1963-march-on-washington-mall.webp', '/archive/1963-march-on-washington-aerial.webp'],
     location: 'Washington, D.C.', topics: ['Organizing & protest', 'Work & opportunity'],
     summary: 'About a quarter of a million people assembled in the nation’s capital for the March on Washington for Jobs and Freedom. Participants urged Congress to enact civil rights legislation and pressed demands for economic opportunity.',
     context: 'Organizers’ planning documents and congressional records show both the coalition behind the march and attempts by opponents to restrict it. The event joined legislative demands to mass public action.',
@@ -264,6 +265,7 @@ const records = [
   },
   {
     id: 'selma-marches', year: 1965, date: 'March 7–25, 1965', title: 'The Selma campaign carries voting demands to Montgomery',
+    images: ['/archive/1965-selma-flags.webp', '/archive/1965-selma-freedom-train.webp', '/archive/1965-selma-to-montgomery.webp'],
     location: 'Selma to Montgomery, Alabama', topics: ['Organizing & protest', 'Law & citizenship'],
     summary: 'On March 7, state troopers and a sheriff’s posse attacked voting rights marchers at the Edmund Pettus Bridge. Images of Bloody Sunday brought national attention to the violence facing Black citizens seeking political participation.',
     context: 'After a further symbolic march and a federal court order, marchers left Selma on March 21 and reached Montgomery five days into the journey. The campaign strengthened pressure for a federal voting rights law.',

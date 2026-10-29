@@ -20,9 +20,15 @@ export function validateContent({ milestones, sources, eras, locations, archive 
     check(date(event.reviewedAt), `${event.id}: missing review date`);
     check(event.placeIds?.every(id => placeIds.has(id)), `${event.id}: unknown map place`);
     check(event.textRights === 'original-summary', `${event.id}: text must be an original summary`);
-    // The current milestone renderer is text-only. Do not silently accept assets
-    // or quotes that bypass its evidence/credit UI; extend the contract first.
-    check(Array.isArray(event.images) && event.images.length === 0, `${event.id}: milestone media requires a reviewed rendering/rights workflow`);
+    // Milestone photographs must join an explicitly reviewed archive record.
+    check(Array.isArray(event.images) && new Set(event.images).size === event.images.length && event.images.every(src => {
+      const plate = archive.find(item => item.src === src);
+      return plate && !plate.placeholder && plate.rights === 'cleared' && plate.basis?.trim() &&
+        plate.milestoneIds?.includes(event.id) && https(plate.source) && https(plate.rightsSource) &&
+        plate.caption && plate.credit && Number.isInteger(plate.year) &&
+        plate.width > 0 && plate.height > 0 && date(plate.rightsReviewedAt) &&
+        plate.rightsReviewedBy && plate.modifications;
+    }), `${event.id}: milestone media requires a registered image and event-specific rights review`);
     check(Array.isArray(event.quotations) && event.quotations.length === 0, `${event.id}: quotations require a reviewed rendering/rights workflow`);
   }
   for (const era of eras) check(era.sourceIds?.length > 0 && era.sourceIds.every(id => Object.hasOwn(sources, id)), `Chapter ${era.year}: missing or unknown sources`);

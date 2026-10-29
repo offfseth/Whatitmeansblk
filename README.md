@@ -4,10 +4,12 @@ The interactive Black Atlas prototype lives in [atlas/](atlas/).
 
 See [setup, architecture, performance and data credits](atlas/README.md).
 
-The website now includes a [milestone collection](atlas/src/data/milestones.js) with 53 original summaries and a [source register](atlas/src/data/sources.js). Open **Milestones** from the atlas masthead to search, filter, and follow the references.
+The website includes a [milestone collection](atlas/src/data/milestones.js) with 53 original summaries, [in-depth reading essays](atlas/src/data/milestoneEssays.js), and a [source register](atlas/src/data/sources.js). Open **Milestones** from the atlas masthead to search the summaries and full essay text, filter, and follow the references.
 
 The map connects this collection to **25 places**, with historical-period coverage by default and an exact-year toggle. Selecting a city zooms into the map and opens a full milestone page in the original city-story design. Each page explains what happened, why it matters, and the local connection, with section citations and a source register. A menu switches between that place’s milestones in the selected period; the longer city essays remain available. All 53 milestones have shareable reading pages, including national and regional entries without city pins. See the [mapping method](atlas/public/data/milestone-map-method.md).
 
-All additions must follow the [sourcing and reuse policy](atlas/CONTENT_POLICY.md). Citations are required; they do not replace permission for protected text, quotations, or images. `npm run build` includes a content publication check.
+Reading pages add event-specific sections, numbered paragraph references, cited background and aftermath timelines, and notes on the evidence. Select a reference to find its bibliographic record, then use **Back to passage** to resume reading. The **In this story** menu moves between sections without changing the shareable event URL.
+
+All additions must follow the [sourcing and reuse policy](atlas/CONTENT_POLICY.md). Citations are required; they do not replace permission for protected text, quotations, or images. `npm run build` includes a content publication check for missing essays, uncited paragraphs and dates, and invalid references.
 
 Quick start: `cd atlas`, `npm ci`, `npm run dev`.

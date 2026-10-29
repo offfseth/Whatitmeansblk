@@ -9,17 +9,23 @@ import { archive } from '../src/data/archive.js';
 import { placeStories, getPlaceStory } from '../src/data/placeStories.js';
 import { validateContent } from '../src/data/contentValidation.js';
 import { getMilestoneStory } from '../src/data/milestoneStories.js';
+import { milestoneEssays } from '../src/data/milestoneEssays.js';
+import { validateEssays } from '../src/data/essayValidation.js';
 
 const errors = [
   ...validateContent({ milestones, sources, eras, locations: mapPlaces, archive }),
   ...validateGeography({ milestones, sources, mapPlaces, points: mapPlacePoints }),
+  ...validateEssays({ essays: milestoneEssays, milestones, sources }),
 ];
 const published = new Set(archive.filter(plate => !plate.placeholder).map(plate => plate.src));
-for (const event of milestones) for (const placeId of event.placeIds.length ? event.placeIds : [null]) {
+// Report malformed editorial records before attempting to build their reader.
+if (!errors.length) for (const event of milestones) for (const placeId of event.placeIds.length ? event.placeIds : [null]) {
   const story = getMilestoneStory(event.id, { placeId });
   for (const section of story.sections) {
     if (!section.sourceIndices.length || section.sourceIndices.some(index => !story.sources[index])) errors.push(`${event.id}: missing reader section citation`);
+    if (section.paragraphSourceIndices?.length !== section.paragraphs.length || section.paragraphSourceIndices.some(indices => !indices.length || indices.some(index => !story.sources[index]))) errors.push(`${event.id}: missing reader paragraph citation`);
   }
+  if (story.dateSources.length !== story.dates.length || story.dateSources.some(indices => !indices.length || indices.some(index => !story.sources[index]))) errors.push(`${event.id}: missing reader date citation`);
 }
 for (const place of mapPlaces) {
   try { if (!(await stat(new URL('../public/places/' + place.id + '.svg', import.meta.url))).size) errors.push(`Empty place illustration: ${place.id}`); }
