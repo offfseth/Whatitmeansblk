@@ -215,6 +215,7 @@ const records = [
   },
   {
     id: 'montgomery-boycott', year: 1955, endYear: 1956, date: 'December 5, 1955–December 20, 1956', title: 'Montgomery residents sustain a bus boycott',
+    images: ['/archive/1956-montgomery-bus-diagram.webp'],
     location: 'Montgomery, Alabama', topics: ['Organizing & protest'],
     summary: 'Following Rosa Parks’s arrest, Black residents refused to ride Montgomery’s segregated buses. The Women’s Political Council helped initiate the protest, and the Montgomery Improvement Association coordinated the extended campaign.',
     context: 'The boycott built on years of local organizing. Participants sustained a mass protest for more than a year, while a legal challenge brought bus segregation before the federal courts.',

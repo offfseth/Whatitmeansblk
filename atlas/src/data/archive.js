@@ -86,6 +86,20 @@ export const archive = [
   // "No known restrictions" is an institutional advisory, not a blanket
   // public-domain declaration. Preserve that distinction in the credits.
   {
+    src: '/archive/1956-montgomery-bus-diagram.webp',
+    milestoneIds: ['montgomery-boycott'],
+    width: 516, height: 600, focus: [50, 45], eraYear: 1954, year: 1956,
+    caption: 'Diagram of the Montgomery bus marking where Rosa Parks was seated, filed as an exhibit in the federal bus-segregation case Browder v. Gayle, 1956',
+    credit: 'Records of District Courts of the United States (RG 21) — U.S. National Archives (NAID 596069)',
+    source: 'https://catalog.archives.gov/id/596069',
+    rightsSource: 'https://docsteach.org/documents/document/diagram-of-the-bus-showing-where-rosa-parks-was-seated',
+    rights: 'cleared',
+    basis: 'The National Archives Foundation DocsTeach item record identifies this document as public domain, free of known copyright restrictions.',
+    rightsReviewedAt: '2026-10-28',
+    rightsReviewedBy: 'Black Atlas editorial workflow (AI-assisted)',
+    modifications: 'Archival JPEG converted to WebP at its original 516-pixel width. No retouching. The header crops for layout; the archive shows the full stored image.',
+  },
+  {
     src: "/archive/1957-little-rock-nine.webp",
     focus: [32, 50],
     eraYear: 1954,
